@@ -91,6 +91,30 @@
       (defalias 'pcase 'cl-case)
     (defalias 'pcase 'case)))
 
+(unless (fboundp 'bindings--define-key)
+(defun bindings--define-key (map key item)
+  "Define KEY in keymap MAP according to ITEM from a menu.
+This is like `define-key', but it takes the definition from the
+specified menu item, and makes pure copies of as much as possible
+of the menu's data."
+  (declare (indent 2))
+  (define-key map key
+    (cond
+     ((not (consp item)) item)     ;Not sure that could be other than a symbol.
+     ;; Keymaps can't be made pure otherwise users can't remove/add elements
+     ;; from/to them any more.
+     ((keymapp item) item)
+     ((stringp (car item))
+      (if (keymapp (cdr item))
+          (cons (purecopy (car item)) (cdr item))
+        (purecopy item)))
+     ((eq 'menu-item (car item))
+      (if (keymapp (nth 2 item))
+          `(menu-item ,(purecopy (nth 1 item)) ,(nth 2 item)
+                      ,@(purecopy (nthcdr 3 item)))
+        (purecopy item)))
+     (t (message "non-menu-item: %S" item) item)))))
+
 (unless (fboundp 'vc-deduce-fileset)
 (defun vc-deduce-fileset (&optional observer allow-unregistered
                                     state-model-only-files)
