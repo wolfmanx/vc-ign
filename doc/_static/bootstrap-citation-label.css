@@ -1,0 +1,15 @@
+.citation .label {
+  color: #000000;
+}
+.kbd {
+  /* font-weight: bold;
+     font-size: 1.1em; */
+  color: #000000;
+  background-color: #ffd700;
+}
+blockquote > div > div.line-block {
+  margin-top: 0px;
+}
+blockquote {
+  padding: 5px 15px !important;
+}

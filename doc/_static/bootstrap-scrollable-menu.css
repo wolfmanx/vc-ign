@@ -1,0 +1,9 @@
+/*
+See `toc dropdown does not scroll on overflow`_
+
+.. _`toc dropdown does not scroll on overflow`: https://github.com/ryan-roemer/sphinx-bootstrap-theme/issues/153
+*/
+.dropdown-menu.globaltoc {
+  max-height: calc(100vh - 50px); /* 50px is "whatever $("#navbar") height is" */
+  overflow: scroll;
+}

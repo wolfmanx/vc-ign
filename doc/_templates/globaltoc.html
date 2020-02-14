@@ -1,0 +1,23 @@
+<li class="dropdown globaltoc-container">
+  <a role="button"
+     id="dLabelGlobalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="{{ pathto(master_doc) }}">{{ theme_navbar_site_name }} <b class="caret"></b></a>
+  <ul class="dropdown-menu globaltoc"
+      role="menu"
+      aria-labelledby="dLabelGlobalToc">{{ toctree(maxdepth=theme_globaltoc_depth|toint, collapse=False, includehidden=theme_globaltoc_includehidden|tobool) }}
+      {%- set _first = true -%}
+      {%- for _rl in rellinks if _rl[0] in ['genindex', 'py-modindex'] -%}
+        {%- if _first -%}
+          <ul class="current">
+          <li class="divider"></li>
+          {%- set _first = false -%}
+        {%- else %}
+          <ul>
+        {%- endif %}
+          <li class="toctree-l1"><a class="reference internal" href="{{ pathto(_rl[0]) }}">{{ _rl[1] }}</a></li>
+          </ul>
+      {%- endfor %}
+</ul>
+</li>

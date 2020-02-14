@@ -1,0 +1,229 @@
+.. -*- coding: utf-8 -*-
+.. Copyright (C) 2020, Wolfgang Scherer, <Wolfgang.Scherer at gmx.de>
+..
+.. This file is part of VC Ignore.
+..
+.. Permission is granted to copy, distribute and/or modify this document
+.. under the terms of the GNU Free Documentation License, Version 1.3
+.. or any later version published by the Free Software Foundation;
+.. with no Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
+.. A copy of the license is included in the section entitled "GNU
+.. Free Documentation License".
+
+.. inline comments (with du_comment_role)
+.. role:: rem(comment)
+.. role:: html(raw)
+   :format: html
+.. role:: shx(code)
+   :language: sh
+
+.. \||<-snip->|| start
+.. -*- coding: utf-8 -*-
+
+.. \||<-snip->|| rem |:sec:| includes
+.. \||<-snap->|| alias inc_standalone     rem
+.. \||<-snap->|| alias inc_index          rem
+.. \||<-snap->|| alias inc_overview       rem
+.. \||<-snap->|| alias inc_chapter        rem
+
+.. \||<-snip->|| rem |:sec:| parts
+.. \||<-snap->|| alias part_top           rem
+.. \||<-snap->|| alias part_title         rem
+.. \||<-snap->|| alias part_contents      rem
+.. \||<-snap->|| alias part_abstract      rem
+.. \||<-snap->|| alias part_body          rem
+.. \||<-snap->|| alias part_refs          rem
+.. \||<-snap->|| alias part_defs          rem
+.. \||<-snap->|| alias part_bottom        rem
+
+.. \||<-snap->|| default doc_dir doc
+
+.. \||<-snip->|| rem |:sec:| doc_md (sphinx-readme.sh)
+.. \||<-snap->|| if defined doc_md
+.. \||<-snap->|| alias inc_md     include
+.. \||<-snap->|| alias doc_md     rem
+.. \||<-snap->|| alias not_doc_md skip
+.. \||<-snap->|| subst doc_standalone
+.. \||<-snap->|| else
+.. \||<-snap->|| alias doc_md     skip
+.. \||<-snap->|| alias not_doc_md rem
+.. \||<-snap->|| fi defined doc_md
+
+.. \||<-snip->|| rem |:sec:| doc_standalone (sphinx-readme.sh)
+.. \||<-snap->|| if defined doc_standalone
+.. \||<-snap->|| alias inc_standalone     include
+.. \||<-snap->|| alias doc_standalone     rem
+.. \||<-snap->|| alias not_doc_standalone skip
+.. \||<-snap->|| subst doc_dir_prefix @doc_dir@/
+.. \||<-snap->|| else
+.. \||<-snap->|| alias doc_standalone     skip
+.. \||<-snap->|| alias not_doc_standalone rem
+.. \||<-snap->|| subst doc_dir_prefix
+.. \||<-snap->|| subst include_directive_combined include::
+.. \||<-snap->|| fi defined doc_standalone
+
+.. \||<-snip->|| rem |:sec:| output_latex (sphinx-readme.sh)
+.. \||<-snap->|| if defined output_latex
+.. \||<-snap->|| alias output_latex       rem
+.. \||<-snap->|| alias not_output_latex   skip
+.. \||<-snap->|| alias part_contents      skip
+.. \||<-snap->|| else
+.. \||<-snap->|| alias output_latex       skip
+.. \||<-snap->|| alias not_output_latex   rem
+.. \||<-snap->|| fi defined output_latex
+
+.. \||<-snip->|| rem |:sec:| doc_index (makefile)
+.. \||<-snap->|| if defined doc_index
+.. \||<-snap->|| alias inc_index          include
+.. \||<-snap->|| alias doc_index          rem
+.. \||<-snap->|| alias not_doc_index      skip
+.. \||<-snap->|| alias part_top           rem
+.. \||<-snap->|| alias part_title         rem
+.. \||<-snap->|| alias part_contents      skip
+.. \||<-snap->|| alias part_abstract      rem
+.. \||<-snap->|| alias part_body          skip
+.. \||<-snap->|| alias part_refs          rem
+.. \||<-snap->|| alias part_defs          rem
+.. \||<-snap->|| alias part_bottom        rem
+.. \||<-snap->|| else
+.. \||<-snap->|| alias doc_index          skip
+.. \||<-snap->|| alias not_doc_index      rem
+.. \||<-snap->|| fi defined doc_index
+
+.. \||<-snip->|| rem |:sec:| doc_overview (makefile)
+.. \||<-snap->|| if defined doc_overview
+.. \||<-snap->|| alias inc_overview       include
+.. \||<-snap->|| alias part_top           rem
+.. \||<-snap->|| alias part_title         skip
+.. \||<-snap->|| alias part_contents      skip
+.. \||<-snap->|| alias part_abstract      skip
+.. \||<-snap->|| alias part_body          rem
+.. \||<-snap->|| alias part_refs          rem
+.. \||<-snap->|| alias part_defs          rem
+.. \||<-snap->|| alias part_bottom        rem
+.. \||<-snap->|| alias doc_overview       rem
+.. \||<-snap->|| alias not_doc_overview   skip
+.. \||<-snap->|| else
+.. \||<-snap->|| alias doc_overview       skip
+.. \||<-snap->|| alias not_doc_overview   rem
+.. \||<-snap->|| fi defined doc_overview
+
+.. \||<-snip->|| rem |:sec:| doc_chapter (makefile)
+.. \||<-snap->|| if defined doc_chapter
+.. \||<-snap->|| alias inc_chapter        include
+.. \||<-snap->|| alias part_top           rem
+.. \||<-snap->|| alias part_title         rem
+.. \||<-snap->|| alias part_contents      skip
+.. \||<-snap->|| alias part_abstract      rem
+.. \||<-snap->|| alias part_body          rem
+.. \||<-snap->|| alias part_refs          rem
+.. \||<-snap->|| alias part_defs          rem
+.. \||<-snap->|| alias part_bottom        rem
+.. \||<-snap->|| alias doc_chapter        rem
+.. \||<-snap->|| alias not_doc_chapter    skip
+.. \||<-snap->|| else
+.. \||<-snap->|| alias doc_chapter        skip
+.. \||<-snap->|| alias not_doc_chapter    rem
+.. \||<-snap->|| fi defined doc_chapter
+
+.. \||<-snip->|| rem |:sec:| doc_slides (makefile)
+.. \||<-snap->|| if defined doc_slides
+.. \||<-snap->|| alias inc_slides        include
+.. \||<-snap->|| alias part_top           rem
+.. \||<-snap->|| alias part_title         rem
+.. \||<-snap->|| alias part_contents      skip
+.. \||<-snap->|| alias part_abstract      skip
+.. \||<-snap->|| alias part_body          rem
+.. \||<-snap->|| alias part_refs          skip
+.. \||<-snap->|| alias part_defs          rem
+.. \||<-snap->|| alias part_bottom        skip
+.. \||<-snap->|| alias doc_slides         rem
+.. \||<-snap->|| alias not_doc_slides     skip
+.. \||<-snip->|| rem |:sec:| activate chapter
+.. \||<-snap->|| alias inc_chapter        include
+.. \||<-snap->|| alias doc_chapter        rem
+.. \||<-snap->|| alias not_doc_chapter    skip
+.. \||<-snap->|| else
+.. \||<-snap->|| alias doc_slides        skip
+.. \||<-snap->|| alias not_doc_slides    rem
+.. \||<-snap->|| fi defined doc_slides
+
+.. \||<-snap->|| if defined output_latex
+.. \||<-snap->|| subst have_sec_numref
+.. \||<-snap->|| fi defined output_latex
+.. \||<-snap->|| if defined output_html
+.. \||<-snap->|| subst have_sec_numref
+.. \||<-snap->|| fi defined output_html
+.. \||<-snap->|| if defined output_singlehtml
+.. \||<-snip->|| rem |:sec:| singlehtml does not assign numbers to sections
+.. \||<-snap->|| undef have_sec_numref
+.. \||<-snap->|| fi defined output_singlehtml
+
+.. \||<-snap->|| doc_standalone
+.. \||<-snap->|| if defined have_sec_numref
+.. role:: sref(numref)
+.. \||<-snap->|| else
+.. role:: sref(ref)
+.. \||<-snap->|| fi defined have_sec_numref
+.. role:: xref(numref)
+.. \||<-snap->|| doc_standalone
+.. \||<-snap->|| not_doc_standalone
+.. role:: sref(numref)
+.. role:: xref(numref)
+.. \||<-snap->|| not_doc_standalone
+
+.. \||<-snap->|| trim right
+.. \||<-snip->|| stop
+
+.. (progn (forward-line 1) (snip-insert "rst_t.ide-update" t t "rst") (insert "\n"))
+.. 
+.. :ide-menu: Emacs IDE Main Menu - Buffer @BUFFER@
+.. . M-x `eIDE-menu' ()(eIDE-menu "z")
+
+.. :ide: CMD: align replace :: substitutions
+.. . (progn (and (buffer-file-name) (save-buffer)) (shell-command (concat "sed 's,\",\"\",;s,^,\",;s,$,\",;s/ *replace" "::/\",\"replace" "::/p;d' " (buffer-file-name) " | xlsx-dump.sh --width 0 --header 0 --mode 'text,dense' ")))
+
+.. :ide: +#-
+.. . Tools ()
+
+.. :ide: COMPILE: latexpdf
+.. . (progn (and (buffer-file-name) (save-buffer)) (compile (concat "make -k latexpdf")))
+
+.. :ide: COMPILE: html
+.. . (progn (and (buffer-file-name) (save-buffer)) (compile (concat "make -k html")))
+
+.. :ide: COMPILE: render reST as pseudoXML
+.. . (let* ((fp (or (buffer-file-name) (concat default-directory (and (boundp 'sphinx-doc-master) sphinx-doc-master) "README.txt"))) (fn (file-name-nondirectory fp))) (save-match-data (if (string-match-t "[.][^.]*$" fn) (setq fn (replace-match "" nil t fn)))) (let ((args (concat " --traceback " (shell-quote-argument fp) " 2>&1 #| tee " (shell-quote-argument fn) ".pxml"))) (and (buffer-file-name) (save-buffer)) (compile (concat "PATH=\".:$PATH\"; ws_rst2pseudoxml.py " args))))
+
+.. :ide: +#-
+.. . Process ()
+
+.. :ide: QUO: ~~ Subsubsection ~~
+.. . (insert "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\:rem\:`|\:sec\:|`\\ ::fillme\::\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" )
+
+.. :ide: QUO: -- Subsection --
+.. . (insert "--------------------------------------------------\n\:rem\:`||\:sec\:||`\\ ::fillme\::\n--------------------------------------------------\n" )
+
+.. :ide: QUO: == Section ==
+.. . (insert "==================================================\n\:rem\:`|||\:sec\:|||`\\ ::fillme\::\n==================================================\n" )
+
+.. :ide: +#-
+.. . Sections ()
+
+.. :ide: OCCUR-OUTLINE:  `|||: sec :|||' + ^.. + command comments
+.. . (x-symbol-tag-occur-outline "sec" '("|:" ":|") (cons (cons "^" ".. ") (cons nil nil)) "\\(_`[^`\n]+`\\|\\[[^]\n]+\\]\\|[|][^|\n]+[|]\\|[^:\n]+::\\)")
+
+.. :ide: MENU-OUTLINE:  `|||: sec :|||' + ^.. + command comments
+.. . (x-eIDE-menu-outline "sec" '("|:" ":|") (cons (cons "^" ".. ") (cons nil nil)) "\\(_`[^`\n]+`\\|\\[[^]\n]+\\]\\|[|][^|\n]+[|]\\|[^:\n]+::\\)")
+
+.. 
+.. Local Variables:
+.. mode: rst
+.. eval: (snip-minor-mode)
+.. snip-show-inactive: t
+.. snip-mode: rst
+.. truncate-lines: t
+.. symbol-tag-symbol-regexp: "[-0-9A-Za-z_#]\\([-0-9A-Za-z_. ]*[-0-9A-Za-z_]\\|\\)"
+.. symbol-tag-auto-comment-mode: nil
+.. symbol-tag-srx-is-safe-with-nil-delimiters: nil
+.. End:

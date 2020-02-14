@@ -1,0 +1,7 @@
+/* ws_revealjs.css */
+.reveal {
+  font-size: 30px !important;
+}
+a.headerlink {
+    display: none;
+}

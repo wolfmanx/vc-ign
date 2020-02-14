@@ -1,0 +1,84 @@
+# -*- perl -*-
+
+# ||<-snap->|| title Snippets Run Control File (http://en.wikipedia.org/wiki/Run_Commands)
+# ||<-snap->|| uuid b7249b04-8e27-39fd-bb24-246d4bad23f1
+
+# Copyright (C) 2020, Wolfgang Scherer, <Wolfgang.Scherer at gmx.de>
+#
+# This file is part of Emacs Development.
+#
+# Permission is granted to copy, distribute and/or modify this document
+# under the terms of the GNU Free Documentation License, Version 1.3
+# or any later version published by the Free Software Foundation;
+# with no Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
+# A copy of the license is included in the section entitled "GNU
+# Free Documentation License".
+#
+# The section of this document enclosed between the snippet tags
+#
+#   `||<- snip ->|| start' and `||<- snip ->|| stop'
+#
+# contains citations from various sources.  Such a section is intended
+# to be extracted by the snippets utility and may be covered by a
+# different license, even if it does not explictely state so.
+
+ # ||<-snap->|| if !defined check_snippet_exec
+ # ||<-snap->|| include ^snip_check\.exec$
+ # @check_snippet_exec@
+ # ||<-snap->|| fi
+
+# ||<-snip->|| start 2020-02-13 23:31:11
+# ||<-snap->|| subst package vc-ign
+# ||<-snap->|| subst Package VC Ignore
+# ||<-snip->|| stop
+
+# :ide-menu: Emacs IDE Main Menu - Buffer @BUFFER@
+# . M-x `eIDE-menu' ()(eIDE-menu "z")
+
+# :ide: DELIM:     |: SYMB :|    standard symbol-tag!
+# . (symbol-tag-normalize-delimiter (cons (cons nil "|:") (cons ":|" nil)) t)
+
+# :ide: DELIM:      @ repl @     standard placeholder
+# . (symbol-tag-normalize-delimiter (cons (cons nil "@") (cons "@" nil)) t)
+
+# :ide: DELIM:   ||<- snap ->||  SNIP-TAG: "sn[ia]p"
+# . (progn (symbol-tag-normalize-delimiter (cons (cons nil "||<-") (cons "->||" nil)) t)(setq symbol-tag-match-rx "sn[ia]p"))
+
+# :ide: DELIM:   ||<- snip ->||  SNIP-TAG: "sn[i]p"
+# . (progn (symbol-tag-normalize-delimiter (cons (cons nil "||<-") (cons "->||" nil)) t)(setq symbol-tag-match-rx "sn[i]p"))
+
+# :ide: +-
+# . ()
+
+# :ide: OCCUR-OUTLINE: Snippets
+# . (x-symbol-tag-occur-outline "snip" '("||<-" "->||") '("||<-sn" "p->||"))
+
+# :ide: MENU-OUTLINE:  Snippets
+# . (x-eIDE-menu-outline "snip" '("||<-" "->||") '("||<-sn" "p->||"))
+
+# :ide: +-
+# . ()
+
+# :ide: CHECK: myself DEBUG
+# . (snip-cat-mode (concat "" (buffer-file-name)) nil (concat " -" "-key check_snippet_debug"))
+
+# :ide: CHECK: myself EXPECT
+# . (snip-cat-mode (concat "" (buffer-file-name)) nil (concat " -" "-key check_snippet_expect"))
+
+# :ide: CHECK: myself
+# . (snip-cat-mode (concat "" (buffer-file-name)) nil (concat " -" "-key check_snippet"))
+
+# :ide: BROWSE: sn-browse.sh --process
+# . (compile (concat "sn-browse.sh  --process " (buffer-file-name)))
+
+# :ide: SNIP: myself
+# . (snip-cat-mode (concat "" (buffer-file-name)) nil)
+
+#
+# Local Variables:
+# mode: perl
+# eval: (snip-minor-mode)
+# snip-show-inactive: t
+# snip-mode: perl
+# truncate-lines: t
+# End:
