@@ -31,10 +31,10 @@ tags:
 
 README.md: README.txt
 	( cd doc && make all-local )
-	SNIPS_PATH="doc:${SNIPS_PATH}" snr --key doc_md --key output_singlehtml --key doc_dir --value doc --mode rst "$$( pwd )/$<" \
+	SNIPS_PATH=".:doc:$${SNIPS_PATH}" snr --key doc_md --key output_singlehtml --key doc_dir --value doc --mode rst "$$( pwd )/$<" \
 	| sed '/^[.][.] \(include\|contents\)::/d;s,@doc_dir_prefix@,doc/,g;s,@, @ ,g;s,^[.][.] \(code-block\|uml\)::,.. code::,;s,:rem:`||*:sec:||*`\\ ,,;s,:\(mod\|mod\):`\([^`]*\)`,**\2**,g;s,:\(attr\|data\|class\|meth\|func\|defun\):`\([^`]*\)`,*\2*,g;s,:\(code\|samp\|elisp\|shx\|file\|kbd\):`\([^`]*\)`,``\2``,g;s,:\(term\|term\):`\([^`]*\)`,`\2`,g' \
 	| pandoc --email-obfuscation=none --from rst --to markdown_github --output - - \
-	| sed '/<colgroup>/,/<\/colgroup>/d;s,\(%20\| \)@\(%20\| \),@,g' >$@ || rm -f $@
+	| sed '/<colgroup>/,/<\/colgroup>/d;s,\(%20\| \)\(@@*\)\(%20\| \),\2,g' >$@ || rm -f $@
 	test -s $@ || ( rm -f $@; exit 1; )
 
 # |:here:|
