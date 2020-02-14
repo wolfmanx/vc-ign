@@ -151,23 +151,32 @@ share the same state."
 (defcustom vc-git-commits-coding-system 'utf-8
   "Default coding system for sending commit log messages to Git."
   :type '(coding-system :tag "Coding system to encode Git commit logs")
-  :version "25.1"))
+  :version "25.1"
+  :group 'vc-git))
 
 (unless (boundp 'vc-git-log-output-coding-system)
 (defcustom vc-git-log-output-coding-system 'utf-8
   "Default coding system for receiving log output from Git."
   :type '(coding-system :tag "Coding system to decode Git log output")
-  :version "25.1"))
-
-(unless (boundp 'revert-buffer-in-progress-p)
-(defvar revert-buffer-in-progress-p nil
-  "Non-nil if a `revert-buffer' operation is in progress, nil otherwise."))
+  :version "25.1"
+  :group 'vc-git))
 
 (unless (boundp 'vc-git-program)
 (defcustom vc-git-program "git"
   "Name of the Git executable (excluding any arguments)."
   :version "24.1"
-  :type 'string))
+  :type 'string
+  :group 'vc-git))
+
+(unless (boundp 'revert-buffer-in-progress-p)
+(defvar revert-buffer-in-progress-p nil
+  "Non-nil if a `revert-buffer' operation is in progress, nil otherwise."))
+
+(unless (boundp 'inhibit-nul-byte-detection)
+  (defvar inhibit-nul-byte-detection nil))
+
+(unless (boundp 'inhibit-null-byte-detection)
+  (defvar inhibit-null-byte-detection nil))
 
 (defun vc-git-command (buffer okstatus file-or-list &rest flags)
   "A wrapper around `vc-do-command' for use in vc-git.el.
@@ -203,6 +212,7 @@ The difference to vc-do-command is that this function always invokes
   ;; directories.  We enable `inhibit-nul-byte-detection', otherwise
   ;; Tramp's eol conversion might be confused.
   (let ((inhibit-nul-byte-detection t)
+	(inhibit-null-byte-detection t)
         (coding-system-for-read
          (or coding-system-for-read vc-git-log-output-coding-system))
         (coding-system-for-write
