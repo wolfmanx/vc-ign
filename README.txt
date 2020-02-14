@@ -84,15 +84,19 @@ the `Sphinx HTML build directory <@doc_dir@/_build/html/>`_
    \nobreak\noindent\setlength{\parindent}{0pt}%
 .. \||<-snap->|| not_doc_md
 
-- Load :file:`x-vc-repair.el` to augment Emacs package :mod:`vc` with VC
+- Load :file:`vc-ign.el` to augment Emacs package :mod:`vc` with VC
   ignore facilities.
 
-- Press :kbd:`F` in :defun:`vc-dir-mode` or :kbd:`C-x v F` in
-  :defun:`dired-mode` to ignore marked files.
+- Press :kbd:`z z` in :defun:`vc-dir-mode` or :kbd:`C-x v z z` in
+  :defun:`dired-mode` to ignore marked files. In other modes, a file
+  is read from the minibuffer. With a prefix argument, the files are
+  removed from the ignore file.
 
-- Press :kbd:`G` in :defun:`vc-dir-mode` or :kbd:`C-x v G` in
+- Press :kbd:`z p` in :defun:`vc-dir-mode` or :kbd:`C-x v z p` in
   :defun:`dired-mode` for a prompt with the current file as properly
-  quoted pattern.
+  quoted pattern. In other modes, a pattern is read from the
+  minibuffer. With a prefix argument, the pattern is removed from the
+  ignore file
 
 .. \|:here:|
 

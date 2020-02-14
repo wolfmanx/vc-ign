@@ -6,9 +6,9 @@ Author
 
 **Quickstart**
 
--   Load `x-vc-repair.el` to augment Emacs package **vc** with VC ignore facilities.
--   Press `F` in *vc-dir-mode* or `C-x v F` in *dired-mode* to ignore marked files.
--   Press `G` in *vc-dir-mode* or `C-x v G` in *dired-mode* for a prompt with the current file as properly quoted pattern.
+-   Load `vc-ign.el` to augment Emacs package **vc** with VC ignore facilities.
+-   Press `z z` in *vc-dir-mode* or `C-x v z z` in *dired-mode* to ignore marked files. In other modes, a file is read from the minibuffer. With a prefix argument, the files are removed from the ignore file.
+-   Press `z p` in *vc-dir-mode* or `C-x v z p` in *dired-mode* for a prompt with the current file as properly quoted pattern. In other modes, a pattern is read from the minibuffer. With a prefix argument, the pattern is removed from the ignore file
 
 **Abstract**
 
