@@ -41,6 +41,9 @@
       (require pkg)
     (error (message "error: %s (ignored)" (error-message-string err)))))
 
+;;;! Emacs < 27
+(when (< emacs-major-version 27)
+
 ;; GNU bug report logs - #37182 24.5; 24.5.1: C-u vc-dir-mark-all-files should not mark directories
 (defun vc-dir-mark-all-files (arg)
   "Mark all files with the same state as the current one.
@@ -143,6 +146,28 @@ share the same state."
 
 ;; See `Git - pathspec`_
 ;; .. _`Git - pathspec`: https://git-scm.com/docs/gitglossary.html#Documentation/gitglossary.txt-aiddefpathspecapathspec
+
+(unless (boundp 'vc-git-commits-coding-system)
+(defcustom vc-git-commits-coding-system 'utf-8
+  "Default coding system for sending commit log messages to Git."
+  :type '(coding-system :tag "Coding system to encode Git commit logs")
+  :version "25.1"))
+
+(unless (boundp 'vc-git-log-output-coding-system)
+(defcustom vc-git-log-output-coding-system 'utf-8
+  "Default coding system for receiving log output from Git."
+  :type '(coding-system :tag "Coding system to decode Git log output")
+  :version "25.1"))
+
+(unless (boundp 'revert-buffer-in-progress-p)
+(defvar revert-buffer-in-progress-p nil
+  "Non-nil if a `revert-buffer' operation is in progress, nil otherwise."))
+
+(unless (boundp 'vc-git-program)
+(defcustom vc-git-program "git"
+  "Name of the Git executable (excluding any arguments)."
+  :version "24.1"
+  :type 'string))
 
 (defun vc-git-command (buffer okstatus file-or-list &rest flags)
   "A wrapper around `vc-do-command' for use in vc-git.el.
