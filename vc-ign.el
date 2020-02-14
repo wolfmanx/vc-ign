@@ -142,7 +142,7 @@ interatively, PROMPT is set to ‘t’."
       (vc-ign-ignore file directory remove t)
     (vc-ign-ignore-fileset nil remove prompt)))
 
-(defun vc-ign-ignore-pattern  (pattern &optional directory remove)
+(defun vc-ign-ignore-pattern  (pattern &optional directory remove backend)
   "Ignore PATTERN under VCS of DIRECTORY.
 
 DIRECTORY defaults to `default-directory' and is used to
@@ -168,15 +168,15 @@ patterns from the ignore file."
              (let* ((cur-file (or
                                (and is-vc-dir-mode (vc-dir-current-file))
                                (and is-dired-mode (car (dired-get-marked-files nil t)))))
-                    ;; (vc-default-ign-get-ignore-file-and-pattern 'Hg "" nil t nil)
                     (ip (vc-call-backend backend 'ign-get-ignore-file-and-pattern cur-file dir t nil))
                     (cur-file-rel (file-relative-name cur-file (file-name-directory (cadr ip)))))
                (cons cur-file-rel ip))))
           (default-pattern (cadr ignore-param))
           (ignore-file (nth 2 ignore-param))
+          (ignore-dir (file-name-directory ignore-file))
           (ignore-completion-table
            (delq nil (append  (list (and default-pattern "") (car ignore-param))
-                              (vc-call-backend backend 'ign-ignore-completion-table dir))))
+                              (vc-call-backend backend 'ign-ignore-completion-table ignore-dir))))
           (remove current-prefix-arg))
      (list
       (completing-read
@@ -186,9 +186,10 @@ patterns from the ignore file."
                (file-relative-name ignore-file dir))
        ignore-completion-table nil nil
        default-pattern)
-      nil remove)))
-  (vc-ign-ignore pattern directory remove nil)
-)
+      ignore-dir remove backend)))
+  (if backend
+      (vc-call-backend backend 'ign-ignore pattern directory remove nil)
+    (vc-ign-ignore pattern directory remove nil)))
 
 ;; .:lst:. end ui
 ;; .:lst:. start frontend
