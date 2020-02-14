@@ -43,32 +43,75 @@
 
 ;;; Code
 
-(require 'vc)
-(require 'vc-hooks)
-(require 'vc-dir)
-(require 'vc-svn)
-(require 'vc-mtn)
+(let ((load-path
+       (cons (file-name-directory
+              (or load-file-name (buffer-file-name)))
+             load-path)))
+  (dolist (pkg '(vc-repair vc vc-hooks vc-svn vc-mtn))
+    (condition-case err
+        (require pkg)
+      (error (message "error: %s (ignored)" (error-message-string err))))))
 
-(condition-case err
-    (progn
-      (let ((load-path (cons "." load-path)))
-        (require 'vc-repair)
-        ))
-  (error (message "error: %s (ignored)" (error-message-string err))))
-
-;; vc-call-backend
-;; vc-deduce-fileset
+;;; Compatibility
+;; vc-call-backend             22
+;; vc-deduce-fileset           22
 ;; vc-dir-current-file
 ;; vc-dir-menu-map
 ;; vc-dir-mode-map
 ;; vc-dir-move-to-goal-column
-;; vc-dir-resynch-file
-;; vc-functions
-;; vc-menu-map
-;; vc-mtn-root
-;; vc-prefix-map
-;; vc-responsible-backend
-;; vc-svn-command
+;; vc-dir-resynch-file         22
+;; vc-dired-deduce-fileset     22
+;; vc-functions                N/A
+;; vc-menu-map                 22
+;; vc-mtn-root                 22
+;; vc-prefix-map               22
+;; vc-responsible-backend      22
+;; vc-svn-command              22
+;; vc--read-lines              22
+
+;; --------------------------------------------------
+;; |||:sec:||| BACKPORT
+;; --------------------------------------------------
+
+(unless (fboundp 'string-match-p)
+(defsubst string-match-p (regexp string &optional start)
+  "Same as `string-match' except this function does not change the match data."
+  (save-match-data
+    (string-match regexp string start))))
+
+(if (fboundp 'cl-delete-if)
+    (defalias 'vc-ign-delete-if 'cl-delete-if)
+  (if (fboundp 'delete-if)
+      (defalias 'vc-ign-delete-if 'delete-if)
+(defun vc-ign-delete-if (predicate seq)
+  (delq nil (mapcar (lambda (s) (and (funcall predicate s) s)) seq)))))
+
+(unless (fboundp 'pcase)
+  (if (fboundp 'cl-case)
+      (defalias 'pcase 'cl-case)
+    (defalias 'pcase 'case)))
+
+(unless (fboundp 'vc-deduce-fileset)
+(defun vc-deduce-fileset (&optional observer allow-unregistered
+                                    state-model-only-files)
+  (when (derived-mode-p 'dired-mode)
+    (vc-dired-deduce-fileset))))
+
+(unless (fboundp 'vc-dired-deduce-fileset)
+(defun vc-dired-deduce-fileset ()
+  (list (vc-responsible-backend default-directory)
+        (dired-map-over-marks (dired-get-filename nil t) nil))))
+
+(unless (fboundp 'vc-dir-resynch-file)
+(defun vc-dir-resynch-file (&rest args)))
+
+(if (fboundp 'vc--read-lines)
+    (defalias 'vc-ign--read-lines 'vc--read-lines)
+(defun vc-ign--read-lines (file)
+  "Return a list of lines of FILE."
+  (with-temp-buffer
+    (insert-file-contents file)
+    (split-string (buffer-string) "\n" t))))
 
 ;; --------------------------------------------------
 ;; |||:sec:||| REPAIR
@@ -133,7 +176,8 @@ PROMPT is passed on to ‘vc-ign-ignore-fileset’. When called
 interatively, PROMPT is set to ‘t’."
   (interactive
    (list
-    (unless (or (derived-mode-p 'vc-dir-mode) (derived-mode-p 'dired-mode))
+    (unless (or (derived-mode-p 'vc-dir-mode)
+                (derived-mode-p 'dired-mode))
       (read-file-name
        (concat "File to "
                (if (not current-prefix-arg) "ignore" "remove") ": ")))
@@ -344,7 +388,13 @@ Otherwise remove PATTERN from IGNORE-FILE."
 
 (defun vc-default-ign-ignore-completion-table (backend file)
   "Return the list of ignored files under BACKEND."
-  (vc-call-backend backend 'ignore-completion-table file))
+  (vc-ign-delete-if
+   (lambda (str)
+     ;; Commented or empty lines.
+     (string-match-p "\\`\\(?:#\\|[ \t\r\n]*\\'\\)" str))
+   (let ((file (vc-call-backend backend 'ign-find-ignore-file file)))
+     (and (file-exists-p file)
+          (vc-ign--read-lines file)))))
 
 (defun vc-default-ign-find-ignore-file (backend file)
   "Return the ignore file for FILE."
@@ -465,17 +515,16 @@ ignore patterns (default is an empty string).")
 
 (defun vc-ign-glob-escape (string)
   "Escape special glob characters in STRING."
-  (save-match-data
-    (if (string-match "[\\?*[]" string)
-        (mapconcat (lambda (c)
-                     (pcase c
-                       (?\\ "\\\\")
-                       (?? "\\?")
-                       (?* "\\*")
-                       (?\[ "\\[")
-                       (_ (char-to-string c))))
-                   string "")
-      string)))
+  (if (string-match-p "[\\?*[]" string)
+      (mapconcat (lambda (c)
+                   (or (pcase c
+                         (?\\ "\\\\")
+                         (?? "\\?")
+                         (?* "\\*")
+                         (?\[ "\\["))
+                       (char-to-string c)))
+                 string "")
+    string))
 ;; (vc-ign-glob-escape "full[glo]?\\b*")
 
 ;; optimized code Python >= v3.7
@@ -520,7 +569,7 @@ Ported from Python v3.7"
 (defun vc-cvs-ign-find-ignore-file (file)
   "Return the ignore file for FILE."
   (expand-file-name ".cvsignore" (if file (file-name-directory file))))
-)
+(defalias 'vc-cvs-find-ignore-file 'vc-cvs-ign-find-ignore-file))
 
 (defvar vc-cvs-ign-ignore-param-glob
   '(:escape: vc-cvs-ign-glob-escape :anchor: "" :trailer: "" :dir-trailer: "/")
@@ -546,7 +595,7 @@ Ported from Python v3.7"
 (defun vc-svn-ign-find-ignore-file (file)
   "Return the virtual ignore file for FILE."
   (expand-file-name ".svnignore" (if file (file-name-directory file))))
-)
+(defalias 'vc-svn-find-ignore-file 'vc-svn-ign-find-ignore-file))
 
 (defvar vc-svn-ign-ignore-param-glob
   '(:escape: vc-ign-glob-escape :anchor: "" :trailer: "" :dir-trailer: "")
@@ -579,20 +628,20 @@ Ported from Python v3.7"
 (defun vc-src-ign-find-ignore-file (file)
   "Return the ignore file for FILE."
   (expand-file-name ".srcignore" (if file (file-name-directory file))))
-)
+(defalias 'vc-src-find-ignore-file 'vc-src-ign-find-ignore-file))
 
 (defun vc-src-ign-glob-escape (string)
   "Escape special glob characters in STRING."
-  (save-match-data
-    (if (string-match "[?*[]" string)
-        (mapconcat (lambda (c)
-                     (pcase c
-                       (?? "[?]")
-                       (?* "[*]")
-                       (?\[ "[[]")
-                       (_ (char-to-string c))))
-                   string "")
-      string)))
+  (if (string-match-p "[?*[]" string)
+      (mapconcat (lambda (c)
+                   (or (pcase c
+                         (?? "[?]")
+                         (?* "[*]")
+                         (?\[ "[[]")
+                         (?\\ "[\\]"))
+                       (char-to-string c)))
+                 string "")
+    string))
 ;; (vc-src-ign-glob-escape "full[glo]?\\b*")
 
 (defvar vc-src-ign-ignore-param-glob
@@ -617,7 +666,7 @@ Ported from Python v3.7"
   "Return the root directory of the repository of FILE."
   (expand-file-name ".bzrignore"
                     (vc-bzr-root file)))
-)
+(defalias 'vc-bzr-find-ignore-file 'vc-src-bzr-find-ignore-file))
 
 (defvar vc-bzr-ign-ignore-param-regexp
   '(:escape: vc-ign-py-regexp-quote :anchor: "RE:^" :trailer: "$" :dir-trailer: "/.*")
@@ -641,7 +690,7 @@ Ported from Python v3.7"
   "Return the git ignore file that controls FILE."
   (expand-file-name ".gitignore"
                     (vc-git-root file)))
-)
+(defalias 'vc-git-find-ignore-file 'vc-git-ign-find-ignore-file))
 
 (defun vc-git-ign-ignore-param (&optional _ignore-file)
   "Appropriate Git ignore parameters for IGNORE-FILE."
@@ -657,12 +706,11 @@ Ported from Python v3.7"
 (put 'HG 'vc-functions nil)
 
 (unless (fboundp 'vc-hg-find-ignore-file)
-
 (defun vc-hg-ign-find-ignore-file (file)
   "Return the root directory of the repository of FILE."
   (expand-file-name ".hgignore"
                     (vc-hg-root file)))
-)
+(defalias 'vc-hg-find-ignore-file 'vc-hg-ign-find-ignore-file))
 
 (defvar vc-hg-ign-ignore-param-regexp
   '(:escape: vc-ign-py-regexp-quote :anchor: "^" :trailer: "$" :dir-trailer: "/")
@@ -701,7 +749,7 @@ Ported from Python v3.7"
 (defun vc-mtn-ign-find-ignore-file (file)
   "Return the mtn ignore file that controls FILE."
   (expand-file-name ".mtn-ignore" (vc-mtn-root file)))
-)
+(defalias 'vc-mtn-find-ignore-file 'vc-mtn-ign-find-ignore-file))
 
 (defvar vc-mtn-ign-ignore-param-regexp
   '(:escape: vc-ign-py-regexp-quote :anchor: "^" :trailer: "$" :dir-trailer: "/")
@@ -735,14 +783,14 @@ Ported from Python v3.7"
     (bindings--define-key map [vc-ign-ignore-file]
       '(menu-item "VC Ignore File..." vc-ign-ignore-file
                   :help "Ignore a file under current version control system"))
-    map)
-)
+    map))
 
 (define-key vc-prefix-map "z" 'vc-ign-prefix-map)
 (bindings--define-key vc-menu-map [vc-ign-ignore] (cons "VC Ignore" vc-ign-menu-map))
 
-(define-key vc-dir-mode-map  "z" 'vc-ign-prefix-map)
-(bindings--define-key vc-dir-menu-map [vc-ign-ignore] (cons "VC Ignore" vc-ign-menu-map))
+(when (boundp 'vc-dir-mode-map)
+  (define-key vc-dir-mode-map  "z" 'vc-ign-prefix-map)
+  (bindings--define-key vc-dir-menu-map [vc-ign-ignore] (cons "VC Ignore" vc-ign-menu-map)))
 
 ;; .:lst:. end integration
   ;; |||:here:|||

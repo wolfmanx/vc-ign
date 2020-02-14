@@ -36,22 +36,10 @@
 ;; |||:sec:||| Repair bugs
 ;; --------------------------------------------------
 
-(condition-case err
-    (progn
-      (require 'vc)
-      (require 'vc-hooks)
-      (require 'vc-dir)
-      (require 'vc-cvs)
-      (require 'vc-svn)
-      ;; (require 'vc-bzr)
-      (require 'vc-git)
-      (require 'vc-hg)
-      (require 'vc-mtn)
-      )
-  (error (message "error: %s (ignored)" (error-message-string err))))
-
-;;;! Emacs 27
-(unless (> emacs-major-version 26)
+(dolist (pkg '(vc vc-hooks vc-dir vc-cvs vc-svn vc-src vc-bzr vc-git vc-hg vc-mtn))
+  (condition-case err
+      (require pkg)
+    (error (message "error: %s (ignored)" (error-message-string err)))))
 
 ;; GNU bug report logs - #37182 24.5; 24.5.1: C-u vc-dir-mark-all-files should not mark directories
 (defun vc-dir-mark-all-files (arg)
@@ -230,9 +218,7 @@ The difference to vc-do-command is that this function always invokes
 
 ;; |:here:| open
 
-(condition-case err
-    (progn
-      (require 'vc-src)
+(when (featurep 'vc-src)
 (unless (fboundp 'vc-src--parse-state)
 
 ;; GNU bug report logs - #39502 [PATCH] Use one src status -a call for vc-src-dir-status-files
@@ -374,8 +360,7 @@ If LIMIT is non-nil, show no more than this many entries."
               vc-src-log-switches)))))
 
 )
-      )
-  (error (message "error: %s (ignored)" (error-message-string err))))
+)
 
 ;; |:here:||:todo:| unreported
 
