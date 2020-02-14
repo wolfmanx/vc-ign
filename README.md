@@ -2,7 +2,7 @@ vc-ign - VC Ignore Emacs Package
 ================================
 
 Author  
-[Wolfgang Scherer](wolfgang.scherer%20@%20gmx.de)
+[Wolfgang Scherer](wolfgang.scherer@gmx.de)
 
 **Quickstart**
 
@@ -19,4 +19,4 @@ Introduction
 
 **Copyright**
 
-Copyright (C) 2020, [Wolfgang Scherer](wolfgang.scherer%20@%20gmx.de), &lt;Wolfgang.Scherer at gmx.de&gt;. See the document source for conditions of use under the GNU Free Documentation License.
+Copyright (C) 2020, [Wolfgang Scherer](wolfgang.scherer@gmx.de), &lt;Wolfgang.Scherer at gmx.de&gt;. See the document source for conditions of use under the GNU Free Documentation License.
