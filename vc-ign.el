@@ -52,26 +52,25 @@
         (require pkg)
       (error (message "error: %s (ignored)" (error-message-string err))))))
 
+;; --------------------------------------------------
+;; |||:sec:||| BACKPORT
+;; --------------------------------------------------
+
 ;;; Compatibility
 ;; vc-call-backend             22
 ;; vc-deduce-fileset           22
-;; vc-dir-current-file
-;; vc-dir-menu-map
-;; vc-dir-mode-map
-;; vc-dir-move-to-goal-column
+;; vc-dir-current-file         23
+;; vc-dir-menu-map             23
+;; vc-dir-mode-map             23
+;; vc-dir-move-to-goal-column  23
 ;; vc-dir-resynch-file         22
 ;; vc-dired-deduce-fileset     22
-;; vc-functions                N/A
 ;; vc-menu-map                 22
 ;; vc-mtn-root                 22
 ;; vc-prefix-map               22
 ;; vc-responsible-backend      22
 ;; vc-svn-command              22
 ;; vc--read-lines              22
-
-;; --------------------------------------------------
-;; |||:sec:||| BACKPORT
-;; --------------------------------------------------
 
 (unless (fboundp 'string-match-p)
 (defsubst string-match-p (regexp string &optional start)
@@ -128,6 +127,20 @@ of the menu's data."
 
 (unless (fboundp 'vc-dir-resynch-file)
 (defun vc-dir-resynch-file (&rest args)))
+
+(defun vc-default-ign-ignore-completion-table (backend file)
+  "Return the list of ignored files under BACKEND."
+  (vc-ign-delete-if
+   (lambda (str)
+     ;; Commented or empty lines.
+     (string-match-p "\\`\\(?:#\\|[ \t\r\n]*\\'\\)" str))
+   (let ((file (vc-call-backend backend 'ign-find-ignore-file file)))
+     (and (file-exists-p file)
+          (vc-ign--read-lines file)))))
+
+(defun vc-default-ign-find-ignore-file (backend file)
+  "Return the ignore file for FILE."
+  (vc-call-backend backend 'find-ignore-file file))
 
 (if (fboundp 'vc--read-lines)
     (defalias 'vc-ign--read-lines 'vc--read-lines)
@@ -409,20 +422,6 @@ Otherwise remove PATTERN from IGNORE-FILE."
       (vc-ign--remove-regexp
        (concat "^" (regexp-quote pattern) "\\(\n\\|$\\)") ignore-file)
     (vc-ign--add-line pattern ignore-file)))
-
-(defun vc-default-ign-ignore-completion-table (backend file)
-  "Return the list of ignored files under BACKEND."
-  (vc-ign-delete-if
-   (lambda (str)
-     ;; Commented or empty lines.
-     (string-match-p "\\`\\(?:#\\|[ \t\r\n]*\\'\\)" str))
-   (let ((file (vc-call-backend backend 'ign-find-ignore-file file)))
-     (and (file-exists-p file)
-          (vc-ign--read-lines file)))))
-
-(defun vc-default-ign-find-ignore-file (backend file)
-  "Return the ignore file for FILE."
-  (vc-call-backend backend 'find-ignore-file file))
 
 ;; .:lst:. end default
 ;; .:lst:. start tools
@@ -817,9 +816,8 @@ Ported from Python v3.7"
   (bindings--define-key vc-dir-menu-map [vc-ign-ignore] (cons "VC Ignore" vc-ign-menu-map)))
 
 ;; .:lst:. end integration
-  ;; |||:here:|||
 
-;; (get-buffer-create (format "*Flymake diagnostics for %s*" (current-buffer)))
+;; |||:here:|||
 
 ;; 
 ;; :ide-menu: Emacs IDE Main Menu - Buffer @BUFFER@
