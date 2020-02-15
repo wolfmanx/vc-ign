@@ -30,12 +30,12 @@
 ;;
 ;;  Backports various VC bug fixes from Emacs 27
 
-;;; Code
-
-;; .:lst:. start repair
+;; .:lst:.  start repair
 ;; --------------------------------------------------
 ;; |||:sec:||| Repair bugs
 ;; --------------------------------------------------
+
+;;; Code:
 
 (dolist (pkg '(vc vc-hooks vc-dir vc-cvs vc-svn vc-src vc-bzr vc-git vc-hg vc-mtn))
   (condition-case err

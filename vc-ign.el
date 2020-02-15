@@ -32,16 +32,16 @@
 ;; facilities.
 ;;
 ;; - Press `z z` in ‘vc-dir-mode’ or `C-x v z z` in ‘dired-mode’ to
-;;   ignore marked files. In other modes, a file is read from the
-;;   minibuffer. With a prefix argument, the files are removed from
+;;   ignore marked files.  In other modes, a file is read from the
+;;   minibuffer.  With a prefix argument, the files are removed from
 ;;   the ignore file.
 ;;
 ;; - Press `z p` in ‘vc-dir-mode’ or `C-x v z p` in ‘dired-mode’ for a
-;;   prompt with the current file as properly quoted pattern. In other
-;;   modes, a pattern is read from the minibuffer. With a prefix
+;;   prompt with the current file as properly quoted pattern.  In other
+;;   modes, a pattern is read from the minibuffer.  With a prefix
 ;;   argument, the pattern is removed from the ignore file
 
-;;; Code
+;;; Code:
 
 (let ((load-path
        (cons (file-name-directory
@@ -129,7 +129,7 @@ of the menu's data."
 (defun vc-dir-resynch-file (&rest args)))
 
 (defun vc-default-ign-ignore-completion-table (backend file)
-  "Return the list of ignored files under BACKEND."
+  "Return the list of ignored files under BACKEND based on FILE."
   (vc-ign-delete-if
    (lambda (str)
      ;; Commented or empty lines.
@@ -139,7 +139,7 @@ of the menu's data."
           (vc-ign--read-lines file)))))
 
 (defun vc-default-ign-find-ignore-file (backend file)
-  "Return the ignore file for FILE."
+  "Return the ignore file for BACKEND based on FILE."
   (vc-call-backend backend 'find-ignore-file file))
 
 (if (fboundp 'vc--read-lines)
@@ -209,8 +209,8 @@ nor ‘dired-mode’, prompt for a FILE to ignore, unless a prefix
 argument is given, in which case prompt for a FILE to remove from
 the list of ignored files.
 
-PROMPT is passed on to ‘vc-ign-ignore-fileset’. When called
-interatively, PROMPT is set to ‘t’."
+PROMPT is passed on to ‘vc-ign-ignore-fileset’.  When called
+interatively, PROMPT is set to t."
   (interactive
    (list
     (unless (or (derived-mode-p 'vc-dir-mode)
@@ -227,7 +227,7 @@ interatively, PROMPT is set to ‘t’."
   "Ignore PATTERN under VCS of DIRECTORY.
 
 DIRECTORY defaults to `default-directory' and is used to
-determine the responsible VC backend.
+determine the responsible VC backend unless BACKEND is specified.
 
 PATTERN is an expression following the rules of the backend
 pattern syntax, matching the files to be ignored.  When REMOVE is
@@ -235,7 +235,7 @@ non-nil, remove PATTERN from the list of ignored files.
 
 When called interactively, prompt for a PATTERN to ignore, unless
 a prefix argument is given, in which case prompt for a PATTERN to
-remove. The completion collection contains the currently defined
+remove.  The completion collection contains the currently defined
 patterns from the ignore file."
   (interactive
    (let* ((dir default-directory)
@@ -316,7 +316,7 @@ If FILESET is not given, it is deduced with
 When REMOVE is non-nil, remove the files from the list of ignored
 files.
 
-If PROMPT is non-nil, confirm the operation. If the confirmation
+If PROMPT is non-nil, confirm the operation.  If the confirmation
 is negative, do not perform the ignore operation."
   (let* ((fileset-arg (or fileset (vc-deduce-fileset t t)))
          (backend (car fileset-arg))
@@ -429,7 +429,7 @@ Otherwise remove PATTERN from IGNORE-FILE."
 ;; --------------------------------------------------
 
 (defun vc-ign-expand-file-name (file &optional directory)
-  " Call ‘expand-file-name’ with normalized FILE and DIRECTORY.
+  "Call ‘expand-file-name’ with normalized FILE and DIRECTORY.
 
 Avoids removing the final slash of directories from the
 expansion, if FILE does not have a trailing slash."
