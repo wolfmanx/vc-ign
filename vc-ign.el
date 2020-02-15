@@ -47,7 +47,7 @@
        (cons (file-name-directory
               (or load-file-name (buffer-file-name)))
              load-path)))
-  (dolist (pkg '(vc vc-hooks vc-svn vc-mtn))
+  (dolist (pkg '(vc vc-hooks vc-dir vc-svn vc-mtn))
     (condition-case err
         (require pkg)
       (error (message "error: %s (ignored)" (error-message-string err))))))
