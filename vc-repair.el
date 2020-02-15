@@ -1,4 +1,4 @@
-;;; vc-repair.el --- repair various VC bugs -*- lexical-binding: t -*-
+;;; vc-repair.el --- Repair various VC bugs -*- lexical-binding: t -*-
 ;;
 ;; usage: (require 'vc-repair)
 :end: ;; script-help
@@ -9,7 +9,7 @@
 ;; Keywords: cvs src svn bzr git hg mtn vc
 ;; Author: Wolfgang Scherer, <Wolfgang.Scherer at gmx.de>
 ;; URL: http://github.com/wolfmanx/vc-ign
-;; Package-Requires: ((emacs "22.1"))
+;; Package-Requires: ((emacs "24"))
 
 ;; This file is part of VC Ignore.
 
@@ -140,8 +140,7 @@ share the same state."
     (if (= (vc-svn-command t t nil "propget" "svn:ignore" (expand-file-name directory)) 0)
         (split-string (buffer-string) "\n"))))
 
-(when (and (fboundp 'vc-git-root)
-           )
+(when (and (fboundp 'vc-git-root))
 
 ;; GNU bug report logs - #39452 [PATCH] vc-git-state fails for filenames with wildcards
 
@@ -227,10 +226,7 @@ The difference to vc-do-command is that this function always invokes
             ,@(when revert-buffer-in-progress-p
                 '("GIT_OPTIONAL_LOCKS=0")))
           process-environment)))
-    (apply 'process-file vc-git-program nil buffer nil "--no-pager" command args)))
-
-)
-
+    (apply 'process-file vc-git-program nil buffer nil "--no-pager" command args))))
 ;;;! Emacs 24
 (when (> emacs-major-version 24)
 
@@ -244,12 +240,8 @@ The difference to vc-do-command is that this function always invokes
                    (concat "-mardu" (if files "i"))
                    "-C"))
   (vc-run-delayed
-    (vc-hg-after-dir-status update-function)))
-
-)
+    (vc-hg-after-dir-status update-function)))))
 ;;;! Emacs 24
-
-)
 ;;;! Emacs 27
 
 ;; |:here:| open
@@ -318,16 +310,12 @@ The difference to vc-do-command is that this function always invokes
           (if (file-directory-p frel)
               (push frel dlist)
             (when (not (eq state 'up-to-date))
-              (push (list frel state) result)))
-          ))
+              (push (list frel state) result)))))
       (dolist (drel dlist)
         (let* ((dresult (vc-src-dir-status-files (expand-file-name drel) nil #'identity)))
           (dolist (dres dresult)
-            (push (list (concat (file-name-as-directory drel) (car dres)) (cadr dres)) result)))
-            )
-      (funcall update-function result))))
-
-)
+            (push (list (concat (file-name-as-directory drel) (car dres)) (cadr dres)) result))))
+      (funcall update-function result)))))
 
 (unless (fboundp 'vc-src-command-raw)
 
@@ -393,10 +381,7 @@ If LIMIT is non-nil, show no more than this many entries."
              (nconc
               ;;(when start-revision (list (format "%s-1" start-revision)))
               (when limit (list "-l" (format "%s" limit)))
-              vc-src-log-switches)))))
-
-)
-)
+              vc-src-log-switches)))))))
 
 ;; |:here:||:todo:| unreported
 

@@ -1,4 +1,4 @@
-;;; vc-ign.el --- manage ignore files with VC
+;;; vc-ign.el --- Manage ignore files with VC
 ;;
 ;; usage: (require 'vc-ign)
 :end: ;; script-help
@@ -9,7 +9,7 @@
 ;; Keywords: cvs src svn bzr git hg mtn vc ignore
 ;; Author: Wolfgang Scherer <Wolfgang.Scherer at gmx.de>
 ;; URL: http://github.com/wolfmanx/vc-ign
-;; Package-Requires: ((emacs "22.1"))
+;; Package-Requires: ((emacs "24"))
 
 ;; This file is part of VC Ignore.
 
@@ -334,8 +334,7 @@ is negative, do not perform the ignore operation."
                       (format "%s %s%s "
                               (car msg-strings)
                               (dired-mark-prompt nil files)
-                              (nth 3 msg-strings)
-                              )))))
+                              (nth 3 msg-strings))))))
       (setq msg (concat (message "%s %s%s... " (nth 1 msg-strings) files
                                  (nth 3 msg-strings)) "done"))
       (mapc
