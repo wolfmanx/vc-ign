@@ -43,11 +43,8 @@
 
 ;;; Code:
 
-(let ((load-path
-       (cons (file-name-directory
-              (or load-file-name (buffer-file-name)))
-             load-path)))
-  (dolist (pkg '(vc vc-hooks vc-dir vc-svn vc-mtn))
+(eval-and-compile
+  (dolist (pkg '(dired vc vc-hooks vc-dir vc-svn vc-src vc-bzr vc-git vc-hg vc-mtn))
     (condition-case err
         (require pkg)
       (error (message "error: %s (ignored)" (error-message-string err))))))
@@ -78,12 +75,12 @@
   (save-match-data
     (string-match regexp string start))))
 
+(defun vc-ign-delete-if (predicate seq)
+  (delq nil (mapcar (lambda (s) (and (funcall predicate s) s)) seq)))
 (if (fboundp 'cl-delete-if)
     (defalias 'vc-ign-delete-if 'cl-delete-if)
   (if (fboundp 'delete-if)
-      (defalias 'vc-ign-delete-if 'delete-if)
-(defun vc-ign-delete-if (predicate seq)
-  (delq nil (mapcar (lambda (s) (and (funcall predicate s) s)) seq)))))
+      (defalias 'vc-ign-delete-if 'delete-if)))
 
 (unless (fboundp 'pcase)
   (if (fboundp 'cl-case)
@@ -142,13 +139,13 @@ of the menu's data."
   "Return the ignore file for BACKEND based on FILE."
   (vc-call-backend backend 'find-ignore-file file))
 
-(if (fboundp 'vc--read-lines)
-    (defalias 'vc-ign--read-lines 'vc--read-lines)
 (defun vc-ign--read-lines (file)
   "Return a list of lines of FILE."
   (with-temp-buffer
     (insert-file-contents file)
-    (split-string (buffer-string) "\n" t))))
+    (split-string (buffer-string) "\n" t)))
+(when (fboundp 'vc--read-lines)
+  (defalias 'vc-ign--read-lines 'vc--read-lines))
 
 ;; --------------------------------------------------
 ;; |||:sec:||| REPAIR
@@ -347,6 +344,90 @@ is negative, do not perform the ignore operation."
     (message msg)))
 
 ;; .:lst:. end frontend
+;; .:lst:. start generic ignore
+;; --------------------------------------------------
+;; |||:sec:||| Generic ignore parameters
+;; --------------------------------------------------
+
+(defvar vc-ign-ignore-param-none
+  '(:escape: identity :anchor: "" :trailer: "" :dir-trailer: "")
+  "Property list of ignore parameters for plain strings.
+
+All properties are optional.
+
+Property :escape: is a function that takes a pattern string as parameter
+and returns an escaped pattern (default is ‘identity’).
+
+Property :anchor: is a string that is prepended to the ignore
+pattern (default is an empty string).
+
+Property :trailer: is a string that is appended to non-directory
+ignore patterns (default is an empty string).
+
+Property :dir-trailer: is a string that is appended to directory
+ignore patterns (default is an empty string).")
+
+(defvar vc-ign-ignore-param-glob
+  '(:escape: vc-ign-glob-escape :anchor: "" :trailer: "" :dir-trailer: "")
+  "Ignore parameters for unanchored glob wildcards.")
+
+(defvar vc-ign-ignore-param-glob-anchored
+  '(:escape: vc-ign-glob-escape :anchor: "/" :trailer: "" :dir-trailer: "/")
+  "Ignore parameters for anchored glob wildcards.")
+
+(defvar vc-ign-ignore-param-regexp
+  '(:escape: regexp-quote :anchor: "^" :trailer: "$" :dir-trailer: "/")
+  "Ignore parameters for anchored regular expressions.")
+
+(defun vc-default-ign-ignore-param (_backend &optional _ignore-file)
+  "Default ignore parameters for IGNORE-FILE."
+  vc-ign-ignore-param-glob)
+
+(defun vc-ign-glob-escape (string)
+  "Escape special glob characters in STRING."
+  (if (string-match-p "[\\?*[]" string)
+      (mapconcat (lambda (c)
+                   (or (pcase c
+                         (?\\ "\\\\")
+                         (?? "\\?")
+                         (?* "\\*")
+                         (?\[ "\\["))
+                       (char-to-string c)))
+                 string "")
+    string))
+;; (vc-ign-glob-escape "full[glo]?\\b*")
+
+;; optimized code Python >= v3.7
+;; # SPECIAL_CHARS
+;; # closing ')', '}' and ']'
+;; # '-' (a range in character set)
+;; # '&', '~', (extended character set operations)
+;; # '#' (comment) and WHITESPACE (ignored) in verbose mode
+;; _special_chars_map = {i: '\\' + chr(i) for i in b'()[]{}?*+-|^$\\.&~# \t\n\r\v\f'}
+
+(defvar vc-ign--py-regexp-special-chars
+  (mapcar
+   (function
+    (lambda (c)
+      (cons c (concat "\\" (char-to-string c)))))
+   "()[]{}?*+-|^$\\.&~# \t\n\r\v\f")
+  "Characters that have special meaning in Python regular expressions.")
+;; (cdr (assq ?/ vc-ign--py-regexp-special-chars))
+;; (cdr (assq ?\( vc-ign--py-regexp-special-chars))
+
+(defun vc-ign-py-regexp-quote (string)
+  "Python regexp to match exactly STRING and nothing else.
+Ported from Python v3.7"
+  (mapconcat
+   (function
+    (lambda (c)
+      (or (cdr (assq c vc-ign--py-regexp-special-chars))
+          (char-to-string c))))
+   string ""))
+;; (insert (format " ;; %S" (vc-ign-py-regexp-quote "abc+.?.\\g'\"hi\030|()"))) ;; "abc\\+\\.\\?\\.\\\\g'\"hi\\|\\(\\)"
+;; (insert (format " ;; %S" (regexp-quote       "abc+.?.\\g'\"hi\030|()"))) ;; "abc\\+\\.\\?\\.\\\\g'\"hi|()"
+
+;; .:lst:. end generic ignore
 ;; .:lst:. start default
 ;; --------------------------------------------------
 ;; |||:sec:||| Default
@@ -496,90 +577,6 @@ Otherwise, if FILE is a directory, the final slash is removed."
     (and (> l 0) (eq (aref s l) ?/) l)))
 
 ;; .:lst:. end tools
-;; .:lst:. start generic ignore
-;; --------------------------------------------------
-;; |||:sec:||| Generic ignore parameters
-;; --------------------------------------------------
-
-(defvar vc-ign-ignore-param-none
-  '(:escape: identity :anchor: "" :trailer: "" :dir-trailer: "")
-  "Property list of ignore parameters for plain strings.
-
-All properties are optional.
-
-Property :escape: is a function that takes a pattern string as parameter
-and returns an escaped pattern (default is ‘identity’).
-
-Property :anchor: is a string that is prepended to the ignore
-pattern (default is an empty string).
-
-Property :trailer: is a string that is appended to non-directory
-ignore patterns (default is an empty string).
-
-Property :dir-trailer: is a string that is appended to directory
-ignore patterns (default is an empty string).")
-
-(defvar vc-ign-ignore-param-glob
-  '(:escape: vc-ign-glob-escape :anchor: "" :trailer: "" :dir-trailer: "")
-  "Ignore parameters for unanchored glob wildcards.")
-
-(defvar vc-ign-ignore-param-glob-anchored
-  '(:escape: vc-ign-glob-escape :anchor: "/" :trailer: "" :dir-trailer: "/")
-  "Ignore parameters for anchored glob wildcards.")
-
-(defvar vc-ign-ignore-param-regexp
-  '(:escape: regexp-quote :anchor: "^" :trailer: "$" :dir-trailer: "/")
-  "Ignore parameters for anchored regular expressions.")
-
-(defun vc-default-ign-ignore-param (_backend &optional _ignore-file)
-  "Default ignore parameters for IGNORE-FILE."
-  vc-ign-ignore-param-glob)
-
-(defun vc-ign-glob-escape (string)
-  "Escape special glob characters in STRING."
-  (if (string-match-p "[\\?*[]" string)
-      (mapconcat (lambda (c)
-                   (or (pcase c
-                         (?\\ "\\\\")
-                         (?? "\\?")
-                         (?* "\\*")
-                         (?\[ "\\["))
-                       (char-to-string c)))
-                 string "")
-    string))
-;; (vc-ign-glob-escape "full[glo]?\\b*")
-
-;; optimized code Python >= v3.7
-;; # SPECIAL_CHARS
-;; # closing ')', '}' and ']'
-;; # '-' (a range in character set)
-;; # '&', '~', (extended character set operations)
-;; # '#' (comment) and WHITESPACE (ignored) in verbose mode
-;; _special_chars_map = {i: '\\' + chr(i) for i in b'()[]{}?*+-|^$\\.&~# \t\n\r\v\f'}
-
-(defvar vc-ign--py-regexp-special-chars
-  (mapcar
-   (function
-    (lambda (c)
-      (cons c (concat "\\" (char-to-string c)))))
-   "()[]{}?*+-|^$\\.&~# \t\n\r\v\f")
-  "Characters that have special meaning in Python regular expressions.")
-;; (cdr (assq ?/ vc-ign--py-regexp-special-chars))
-;; (cdr (assq ?\( vc-ign--py-regexp-special-chars))
-
-(defun vc-ign-py-regexp-quote (string)
-  "Python regexp to match exactly STRING and nothing else.
-Ported from Python v3.7"
-  (mapconcat
-   (function
-    (lambda (c)
-      (or (cdr (assq c vc-ign--py-regexp-special-chars))
-          (char-to-string c))))
-   string ""))
-;; (insert (format " ;; %S" (vc-ign-py-regexp-quote "abc+.?.\\g'\"hi\030|()"))) ;; "abc\\+\\.\\?\\.\\\\g'\"hi\\|\\(\\)"
-;; (insert (format " ;; %S" (regexp-quote       "abc+.?.\\g'\"hi\030|()"))) ;; "abc\\+\\.\\?\\.\\\\g'\"hi|()"
-
-;; .:lst:. end generic ignore
 ;; .:lst:. start cvs ignore
 ;; --------------------------------------------------
 ;; |||:sec:||| CVS specialized parameters
@@ -682,6 +679,8 @@ Ported from Python v3.7"
 
 (put 'Bzr 'vc-functions nil)
 (put 'BZR 'vc-functions nil)
+
+(declare-function 'vc-bzr-root "vc-bzr" (file) t)
 
 (unless (fboundp 'vc-bzr-find-ignore-file)
 (defun vc-bzr-ign-find-ignore-file (file)
@@ -860,6 +859,12 @@ Ported from Python v3.7"
 
 ;; :ide: +-#+
 ;; . Buffer Outline ()
+
+;;; :ide: CMD: (compile "cask build" nil)
+;;; . (compile "cask build" nil)
+
+;; :ide: +-#+
+;; . Compile ()
 
 ;;
 ;; Local Variables:
