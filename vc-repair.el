@@ -1,4 +1,4 @@
-;;; vc-repair.el --- Repair various VC bugs -*- lexical-binding: t -*-
+;;; vc-repair.el --- Repair various VC bugs -*- lexical-binding: t; -*-
 ;;
 ;; usage: (require 'vc-repair)
 :end: ;; script-help
@@ -9,7 +9,7 @@
 ;; Keywords: cvs src svn bzr git hg mtn vc
 ;; Author: Wolfgang Scherer, <Wolfgang.Scherer at gmx.de>
 ;; URL: http://github.com/wolfmanx/vc-ign
-;; Package-Requires: ((emacs "24"))
+;; Package-Requires: ((emacs "24") ("vc-ign" "1.0.0"))
 
 ;; This file is part of VC Ignore.
 
@@ -37,10 +37,14 @@
 
 ;;; Code:
 
-(dolist (pkg '(vc vc-hooks vc-dir vc-cvs vc-svn vc-src vc-bzr vc-git vc-hg vc-mtn))
-  (condition-case err
-      (require pkg)
-    (error (message "error: %s (ignored)" (error-message-string err)))))
+(let ((load-path
+       (cons (file-name-directory
+              (or load-file-name (buffer-file-name)))
+             load-path)))
+  (dolist (pkg '(vc vc-hooks vc-dir vc-cvs vc-svn vc-src vc-bzr vc-git vc-hg vc-mtn vc-ign))
+    (condition-case err
+        (require pkg)
+      (error (message "error: %s (ignored)" (error-message-string err))))))
 
 ;;;! Emacs < 27
 (when (< emacs-major-version 27)
@@ -268,8 +272,8 @@ The difference to vc-do-command is that this function always invokes
   "SRC-specific version of `vc-state'."
   (let*
       ((status nil)
-       (default-directory (vc-file-name-directory file nil t))
-       (file (vc-file-relative-name file))
+       (default-directory (vc-ign-file-name-directory file nil t))
+       (file (vc-ign-file-relative-name file))
        (out
         (with-output-to-string
           (with-current-buffer
@@ -299,7 +303,7 @@ The difference to vc-do-command is that this function always invokes
                       (apply
                        #'process-file vc-src-program nil t nil
                        "status" "-a"
-                       (mapcar (lambda (f) (vc-file-relative-name f)) files))
+                       (mapcar (lambda (f) (vc-ign-file-relative-name f)) files))
                     (error nil))))))
        dlist)
     (when (eq 0 status)
@@ -350,8 +354,8 @@ If a file is a directory and DIR-IS-EMPTY is nil,
 a file argument."
   (if (and vc-src-command-safe file-or-list)
       (dolist (file (if (stringp file-or-list) (list file-or-list) file-or-list))
-        (let* ((default-directory (vc-file-name-directory file nil (not dir-is-empty)))
-               (file (vc-file-relative-name file nil dir-is-empty)))
+        (let* ((default-directory (vc-ign-file-name-directory file nil (not dir-is-empty)))
+               (file (vc-ign-file-relative-name file nil dir-is-empty)))
           (vc-src-command-raw buffer file flags)))
     (vc-src-command-raw buffer file-or-list flags)))
 

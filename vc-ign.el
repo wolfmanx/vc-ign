@@ -1,4 +1,4 @@
-;;; vc-ign.el --- Manage ignore files with VC
+;;; vc-ign.el --- Manage ignore files with VC -*- lexical-binding: t; -*-
 ;;
 ;; usage: (require 'vc-ign)
 :end: ;; script-help
@@ -47,7 +47,7 @@
        (cons (file-name-directory
               (or load-file-name (buffer-file-name)))
              load-path)))
-  (dolist (pkg '(vc-repair vc vc-hooks vc-svn vc-mtn))
+  (dolist (pkg '(vc vc-hooks vc-svn vc-mtn))
     (condition-case err
         (require pkg)
       (error (message "error: %s (ignored)" (error-message-string err))))))
@@ -115,8 +115,8 @@ of the menu's data."
      (t (message "non-menu-item: %S" item) item)))))
 
 (unless (fboundp 'vc-deduce-fileset)
-(defun vc-deduce-fileset (&optional observer allow-unregistered
-                                    state-model-only-files)
+(defun vc-deduce-fileset (&optional _observer _allow-unregistered
+                                    _state-model-only-files)
   (when (derived-mode-p 'dired-mode)
     (vc-dired-deduce-fileset))))
 
@@ -126,7 +126,7 @@ of the menu's data."
         (dired-map-over-marks (dired-get-filename nil t) nil))))
 
 (unless (fboundp 'vc-dir-resynch-file)
-(defun vc-dir-resynch-file (&rest args)))
+(defun vc-dir-resynch-file (&rest _args)))
 
 (defun vc-default-ign-ignore-completion-table (backend file)
   "Return the list of ignored files under BACKEND based on FILE."
