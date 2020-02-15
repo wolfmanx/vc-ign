@@ -1,4 +1,4 @@
-;; vc-ign.el - ignore feature for VC
+;;; vc-ign.el --- manage ignore files with VC
 ;;
 ;; usage: (require 'vc-ign)
 :end: ;; script-help

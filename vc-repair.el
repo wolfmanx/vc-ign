@@ -1,4 +1,4 @@
-;; vc-repair.el - repair VC bugs -*- lexical-binding: t -*-
+;;; vc-repair.el --- repair various VC bugs -*- lexical-binding: t -*-
 ;;
 ;; usage: (require 'vc-repair)
 :end: ;; script-help
@@ -28,6 +28,7 @@
 
 ;;; Commentary:
 ;;
+;;  Backports various VC bug fixes from Emacs 27
 
 ;;; Code
 
@@ -212,7 +213,7 @@ The difference to vc-do-command is that this function always invokes
   ;; directories.  We enable `inhibit-nul-byte-detection', otherwise
   ;; Tramp's eol conversion might be confused.
   (let ((inhibit-nul-byte-detection t)
-	(inhibit-null-byte-detection t)
+        (inhibit-null-byte-detection t)
         (coding-system-for-read
          (or coding-system-for-read vc-git-log-output-coding-system))
         (coding-system-for-write
@@ -330,7 +331,7 @@ The difference to vc-do-command is that this function always invokes
 
 (unless (fboundp 'vc-src-command-raw)
 
-;; |:here:||:todo:| unreported: SRC commands do not work in sub-directories
+;; |:here:||:todo:| reported to ESR,: SRC commands do not work in sub-directories
 (defcustom vc-src-command-safe t
   "Run SRC commands separately and normalized for each file.
 This is necessary when SRC has trouble working on files in
@@ -399,49 +400,6 @@ If LIMIT is non-nil, show no more than this many entries."
 
 ;; |:here:||:todo:| unreported
 
-(if t nil                             ; disabled
-
-;; |:here:| unreported: vc-revert does not work for added files under Git
-;; |:todo:| it happens sporadically, that ‘vc-backend’ reports nil, but
-;; ‘vc-responsible-backend’ reports the correct backend, the reason is
-;; unclear
-
-(defmacro vc-call-responsible (fun file &rest args)
-  "A convenience macro for calling VC backend functions.
-Functions called by this macro must accept FILE as the first argument.
-ARGS specifies any additional arguments.  FUN should be unquoted.
-BEWARE!! FILE is evaluated twice!!"
-  `(vc-call-backend (vc-responsible-backend ,file) ',fun ,file ,@args))
-
-(defun vc-version-backup-file (file &optional rev)
-  "Return name of backup file for revision REV of FILE.
-If version backups should be used for FILE, and there exists
-such a backup for REV or the working revision of file, return
-its name; otherwise return nil."
-  (when (vc-call-responsible make-version-backups-p file)
-    (let ((backup-file (vc-version-backup-file-name file rev)))
-      (if (file-exists-p backup-file)
-          backup-file
-        ;; there is no automatic backup, but maybe the user made one manually
-        (setq backup-file (vc-version-backup-file-name file rev 'manual))
-        (when (file-exists-p backup-file)
-          backup-file)))))
-
-(defun vc-revert-file (file)
-  "Revert FILE back to the repository working revision it was based on."
-  (with-vc-properties
-   (list file)
-   (let ((backup-file (vc-version-backup-file file)))
-     (when backup-file
-       (copy-file backup-file file 'ok-if-already-exists)
-       (vc-delete-automatic-version-backups file))
-     (vc-call-responsible revert file backup-file))
-   `((vc-state . up-to-date)
-     (vc-checkout-time . ,(file-attribute-modification-time
-                           (file-attributes file)))))
-  (vc-resynch-buffer file t t))
-
-)
 ;; .:lst:. end repair
   ;; |||:here:|||
 
