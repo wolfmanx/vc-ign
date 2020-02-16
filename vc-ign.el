@@ -860,6 +860,9 @@ Otherwise, if FILE is a directory, the final slash is removed."
 ;; :ide: +-#+
 ;; . Buffer Outline ()
 
+;;; :ide: CMD: (compile "EMACS='emacs24' cask build" nil)
+;;; . (compile "EMACS='emacs24' cask build" nil)
+
 ;;; :ide: CMD: (compile "cask build" nil)
 ;;; . (compile "cask build" nil)
 
