@@ -47,6 +47,55 @@
   (dolist (pkg '(dired vc vc-hooks vc-dir vc-svn vc-src vc-bzr vc-git vc-hg vc-mtn))
     (condition-case nil (require pkg) (error nil))))
 
+;; .:lst:. start package-lint
+;; --------------------------------------------------
+;; |||:sec:||| package-lint support
+;; --------------------------------------------------
+
+;; (insert (format "\n%S" (rx string-start (or "vc-"(or "default" "CVS" "SVN" "SRC" "Bzr" "Git" "Hg" "Mtn") "-ign"))))
+
+(unless (boundp 'package-lint--sane-prefixes)
+  (defvar package-lint--sane-prefixes ""))
+
+(defvar vc-ign-package-lint--sane-prefixes
+  "\\`\\(?:vc-\\|\\(?:Bzr\\|CVS\\|Git\\|Hg\\|Mtn\\|S\\(?:RC\\|VN\\)\\|default\\)\\|-ign\\)"
+  "Sane ‘vc-’ backend prefixes for package-lint.")
+
+(defun vc-ign-do-package-lint-current-buffer ()
+  "Dummy replacement for ‘package-lint-current-buffer’.")
+(if (fboundp 'package-lint-current-buffer)
+    (defalias 'vc-ign-do-package-lint-current-buffer
+      'package-lint-current-buffer))
+
+(defun vc-ign-package-lint-current-buffer ()
+  "Display lint errors and warnings for the current buffer.
+
+The variable ‘package-lint--sane-prefixes’ is extended with
+‘vc-ign-package-lint--sane-prefixes’ before calling
+‘package-lint-current-buffer’.
+
+Since ‘vc-call-backend’ searches for backend functions with a
+hardcoded prefix of ‘vc-’, the backend functions here cannot be
+named with a prefix of ‘vc-ign-' + ‘backend’.
+
+The regular expression ‘vc-ign-package-lint--sane-prefixes’
+defines backend prefixes for all supported backends, constructed
+from:
+
+  ‘vc-’ ‘backend’ ‘-ign’
+
+Therefore, the linter still reports other functions, that do not
+belong to this package."
+  (interactive)
+  (let ((package-lint--sane-prefixes
+         (concat
+          package-lint--sane-prefixes
+          "\\|"
+          vc-ign-package-lint--sane-prefixes)))
+    (vc-ign-do-package-lint-current-buffer)))
+
+;; .:lst:. end package-lint
+;; .:lst:. start backport
 ;; --------------------------------------------------
 ;; |||:sec:||| BACKPORT
 ;; --------------------------------------------------
@@ -67,84 +116,89 @@
 ;; vc-svn-command              22
 ;; vc--read-lines              22
 
-(unless (fboundp 'string-match-p)
-(defsubst string-match-p (regexp string &optional start)
-  "Same as `string-match' except this function does not change the match data."
-  (save-match-data
-    (string-match regexp string start))))
+(eval-and-compile
+  (if (fboundp 'string-match-p)
+      (defalias 'vc-ign-string-match-p 'string-match-p)
+    (defsubst vc-ign-string-match-p (regexp string &optional start)
+      "Same as `string-match' except this function does not change the match data."
+      (save-match-data
+        (string-match regexp string start))))
 
-(defun vc-ign-delete-if (predicate seq)
-  (delq nil (mapcar (lambda (s) (and (funcall predicate s) s)) seq)))
-(if (fboundp 'cl-delete-if)
-    (defalias 'vc-ign-delete-if 'cl-delete-if)
-  (if (fboundp 'delete-if)
-      (defalias 'vc-ign-delete-if 'delete-if)))
+  (if (fboundp 'cl-delete-if)
+      (defalias 'vc-ign-delete-if 'cl-delete-if)
+    (if (fboundp 'delete-if)
+        (defalias 'vc-ign-delete-if 'delete-if)
+      (defun vc-ign-delete-if (predicate seq)
+        (delq nil (mapcar (lambda (s) (and (funcall predicate s) s)) seq)))))
 
-(unless (fboundp 'pcase)
-  (if (fboundp 'cl-case)
-      (defalias 'pcase 'cl-case)
-    (defalias 'pcase 'case)))
+  (if (fboundp 'pcase)
+      (defalias 'vc-ign-case 'pcase)
+    (if (fboundp 'cl-case)
+        (defalias 'vc-ign-case 'cl-case)
+      (defalias 'vc-ign-case 'case)))
 
-(unless (fboundp 'bindings--define-key)
-(defun bindings--define-key (map key item)
-  "Define KEY in keymap MAP according to ITEM from a menu.
+  (if (fboundp 'bindings--define-key)
+      (defalias 'vc-ign-bindings--define-key 'bindings--define-key)
+    (defun vc-ign-bindings--define-key (map key item)
+      "Define KEY in keymap MAP according to ITEM from a menu.
 This is like `define-key', but it takes the definition from the
 specified menu item, and makes pure copies of as much as possible
 of the menu's data."
-  (declare (indent 2))
-  (define-key map key
-    (cond
-     ((not (consp item)) item)     ;Not sure that could be other than a symbol.
-     ;; Keymaps can't be made pure otherwise users can't remove/add elements
-     ;; from/to them any more.
-     ((keymapp item) item)
-     ((stringp (car item))
-      (if (keymapp (cdr item))
-          (cons (purecopy (car item)) (cdr item))
-        (purecopy item)))
-     ((eq 'menu-item (car item))
-      (if (keymapp (nth 2 item))
-          `(menu-item ,(purecopy (nth 1 item)) ,(nth 2 item)
-                      ,@(purecopy (nthcdr 3 item)))
-        (purecopy item)))
-     (t (message "non-menu-item: %S" item) item)))))
+      (declare (indent 2))
+      (define-key map key
+        (cond
+         ((not (consp item)) item)     ;Not sure that could be other than a symbol.
+         ;; Keymaps can't be made pure otherwise users can't remove/add elements
+         ;; from/to them any more.
+         ((keymapp item) item)
+         ((stringp (car item))
+          (if (keymapp (cdr item))
+              (cons (purecopy (car item)) (cdr item))
+            (purecopy item)))
+         ((eq 'menu-item (car item))
+          (if (keymapp (nth 2 item))
+              `(menu-item ,(purecopy (nth 1 item)) ,(nth 2 item)
+                          ,@(purecopy (nthcdr 3 item)))
+            (purecopy item)))
+         (t (message "non-menu-item: %S" item) item)))))
 
-(unless (fboundp 'vc-deduce-fileset)
-(defun vc-deduce-fileset (&optional _observer _allow-unregistered
-                                    _state-model-only-files)
-  (when (derived-mode-p 'dired-mode)
-    (vc-dired-deduce-fileset))))
+  (if (fboundp 'vc-deduce-fileset)
+      (defalias 'vc-ign-vc-deduce-fileset 'vc-deduce-fileset)
+    (defun vc-ign-vc-deduce-fileset (&optional _observer _allow-unregistered
+                                               _state-model-only-files)
+      (when (derived-mode-p 'dired-mode)
+        (vc-ign-vc-dired-deduce-fileset))))
 
-(unless (fboundp 'vc-dired-deduce-fileset)
-(defun vc-dired-deduce-fileset ()
-  (list (vc-responsible-backend default-directory)
-        (dired-map-over-marks (dired-get-filename nil t) nil))))
+  (if (fboundp 'vc-dired-deduce-fileset)
+      (defalias 'vc-ign-vc-dired-deduce-fileset 'vc-dired-deduce-fileset)
+    (defun vc-ign-vc-dired-deduce-fileset ()
+      (list (vc-responsible-backend default-directory)
+            (dired-map-over-marks (dired-get-filename nil t) nil))))
 
-(unless (fboundp 'vc-dir-resynch-file)
-(defun vc-dir-resynch-file (&rest _args)))
+  (if (fboundp 'vc-dir-resynch-file)
+      (defalias 'vc-ign-vc-dir-resynch-file 'vc-dir-resynch-file)
+    (defun vc-ign-vc-dir-resynch-file (&rest _args)))
 
-(defun vc-default-ign-ignore-completion-table (backend file)
-  "Return the list of ignored files under BACKEND based on FILE."
-  (vc-ign-delete-if
-   (lambda (str)
-     ;; Commented or empty lines.
-     (string-match-p "\\`\\(?:#\\|[ \t\r\n]*\\'\\)" str))
-   (let ((file (vc-call-backend backend 'ign-find-ignore-file file)))
-     (and (file-exists-p file)
-          (vc-ign--read-lines file)))))
+  (defun vc-default-ign-ignore-completion-table (backend file)
+    "Return the list of ignored files under BACKEND based on FILE."
+    (vc-ign-delete-if
+     (lambda (str)
+       ;; Commented or empty lines.
+       (vc-ign-string-match-p "\\`\\(?:#\\|[ \t\r\n]*\\'\\)" str))
+     (let ((file (vc-call-backend backend 'ign-find-ignore-file file)))
+       (and (file-exists-p file)
+            (vc-ign--read-lines file)))))
 
-(defun vc-default-ign-find-ignore-file (backend file)
-  "Return the ignore file for BACKEND based on FILE."
-  (vc-call-backend backend 'find-ignore-file file))
+  (if (fboundp 'vc--read-lines)
+      (defalias 'vc-ign--read-lines 'vc--read-lines)
+    (defun vc-ign--read-lines (file)
+      "Return a list of lines of FILE."
+      (with-temp-buffer
+        (insert-file-contents file)
+        (split-string (buffer-string) "\n" t)))))
 
-(defun vc-ign--read-lines (file)
-  "Return a list of lines of FILE."
-  (with-temp-buffer
-    (insert-file-contents file)
-    (split-string (buffer-string) "\n" t)))
-(when (fboundp 'vc--read-lines)
-  (defalias 'vc-ign--read-lines 'vc--read-lines))
-
+;; .:lst:. end backport
+;; .:lst:. start repair
 ;; --------------------------------------------------
 ;; |||:sec:||| REPAIR
 ;; --------------------------------------------------
@@ -177,6 +231,7 @@ of the menu's data."
     (if (= (vc-svn-command t t nil "propget" "svn:ignore" (expand-file-name directory)) 0)
         (split-string (buffer-string) "\n"))))
 
+;; .:lst:. end repair
 ;; .:lst:. start ui
 ;; --------------------------------------------------
 ;; |||:sec:||| User Interface
@@ -306,14 +361,14 @@ and anchored by the VC backend."
   "Ignore file set under a version control system..
 
 If FILESET is not given, it is deduced with
-‘vc-deduce-fileset’.
+‘vc-ign-vc-deduce-fileset’.
 
 When REMOVE is non-nil, remove the files from the list of ignored
 files.
 
 If PROMPT is non-nil, confirm the operation.  If the confirmation
 is negative, do not perform the ignore operation."
-  (let* ((fileset-arg (or fileset (vc-deduce-fileset t t)))
+  (let* ((fileset-arg (or fileset (vc-ign-vc-deduce-fileset t t)))
          (backend (car fileset-arg))
          (files (delq nil (nth 1 fileset-arg)))
          (msg-strings (if remove
@@ -335,7 +390,7 @@ is negative, do not perform the ignore operation."
       (mapc
        (lambda (file)
          (vc-call-backend backend 'ign-ignore file nil remove t)
-         (vc-dir-resynch-file file))
+         (vc-ign-vc-dir-resynch-file file))
        files))
     (when (derived-mode-p 'vc-dir-mode)
       (vc-dir-move-to-goal-column))
@@ -383,9 +438,9 @@ ignore patterns (default is an empty string).")
 
 (defun vc-ign-glob-escape (string)
   "Escape special glob characters in STRING."
-  (if (string-match-p "[\\?*[]" string)
+  (if (vc-ign-string-match-p "[\\?*[]" string)
       (mapconcat (lambda (c)
-                   (or (pcase c
+                   (or (vc-ign-case c
                          (?\\ "\\\\")
                          (?? "\\?")
                          (?* "\\*")
@@ -426,82 +481,6 @@ Ported from Python v3.7"
 ;; (insert (format " ;; %S" (regexp-quote       "abc+.?.\\g'\"hi\030|()"))) ;; "abc\\+\\.\\?\\.\\\\g'\"hi|()"
 
 ;; .:lst:. end generic ignore
-;; .:lst:. start default
-;; --------------------------------------------------
-;; |||:sec:||| Default
-;; --------------------------------------------------
-
-(defun vc-default-ign-ignore (backend pattern-or-file &optional directory remove is-file)
-  ;; implements ‘vc-ign-ignore’ generically
-  (apply #'vc-call-backend backend 'ign-modify-ignore-specs
-         (vc-call-backend backend 'ign-get-ignore-file-and-pattern
-                          pattern-or-file directory is-file remove)))
-
-(defun vc-default-ign-get-ignore-file-and-pattern (backend pattern-or-file &optional directory is-file remove)
-  "Determine ignore file and pattern for BACKEND from PATTERN-OR-FILE.
-Implements API of ‘vc-ign-ignore’ for PATTERN-OR-FILE, DIRECTORY and IS-FILE.
-REMOVE is passed through without evaluation.
-Returns (pattern ignore-file remove) suitable for calling
-‘vc-default-ign-modify-ignore-specs’."
-
-  (if (null pattern-or-file) (setq pattern-or-file ""))
-  (setq directory (or directory default-directory))
-  (when is-file
-    (setq pattern-or-file (vc-ign-expand-file-name pattern-or-file directory))
-    ;; apply directory-as-file-name, otherwise, if pattern-or-file was
-    ;; a sub-repository, ign-find-ignore-file would return the wrong
-    ;; ignore file:
-    ;; (vc-cvs-ign-find-ignore-file "/re/po/dir/") => /re/po/dir/.cvsignore
-    ;; (vc-cvs-ign-find-ignore-file "/re/po/dir") => /re/po/.cvsignore
-    (if (not (string= pattern-or-file directory))
-        (setq directory (file-name-directory (directory-file-name pattern-or-file)))))
-
-  (let* ((ignore-file (vc-call-backend backend 'ign-find-ignore-file directory))
-         (ignore-dir (file-name-directory ignore-file))
-         is-dir ignore-param pattern)
-    (if (not is-file)
-        (setq ignore-param vc-ign-ignore-param-none)
-
-      ;; prepare file pattern
-      (let* ((ignore-dir-len (length ignore-dir))
-             (file-len (length pattern-or-file)))
-        (unless (cond
-                 ((>= file-len ignore-dir-len)
-                  (string= (substring pattern-or-file 0 ignore-dir-len) ignore-dir))
-                 ((= (1- ignore-dir-len) file-len)
-                  (string= pattern-or-file (substring ignore-dir 0 file-len))))
-          (error "Ignore spec %s is not below project root %s"
-                 pattern-or-file ignore-dir))
-        ;; directory may not yet exist
-        (setq is-dir (or (vc-ign-has-final-slash pattern-or-file)
-                         (file-directory-p pattern-or-file)))
-        (setq pattern-or-file
-              (directory-file-name
-               (substring (if is-dir
-                              (file-name-as-directory pattern-or-file)
-                            pattern-or-file)
-                          ignore-dir-len)))
-        ;; (setq debug-on-next-call t) ;; |||:here:|||
-        (if (string= pattern-or-file "") (setq is-dir nil))
-        (setq ignore-param (vc-call-backend backend 'ign-ignore-param ignore-file))))
-    (setq pattern
-          (concat
-           (plist-get ignore-param :anchor:)
-           (funcall (or (plist-get ignore-param :escape:) #'identity)
-                    pattern-or-file)
-           (or (and is-dir (plist-get ignore-param :dir-trailer:))
-               (plist-get ignore-param :trailer:))))
-    (list pattern ignore-file remove)))
-
-(defun vc-default-ign-modify-ignore-specs (_backend pattern ignore-file remove)
-  "Add PATTERN to IGNORE-FILE, if REMOVE is nil..
-Otherwise remove PATTERN from IGNORE-FILE."
-  (if remove
-      (vc-ign--remove-regexp
-       (concat "^" (regexp-quote pattern) "\\(\n\\|$\\)") ignore-file)
-    (vc-ign--add-line pattern ignore-file)))
-
-;; .:lst:. end default
 ;; .:lst:. start tools
 ;; --------------------------------------------------
 ;; |||:sec:||| Tools
@@ -611,37 +590,11 @@ Otherwise, if FILE is a directory, the final slash is removed."
        (directory-file-name (file-relative-name file dir))))
 
 (defun vc-ign-has-final-slash (s)
-  ;"Return index of final slash in string S or nil."
+  "Return index of final slash in string S or nil."
   (let ((l (1- (length s))))
     (and (> l 0) (eq (aref s l) ?/) l)))
 
 ;; .:lst:. end tools
-;; .:lst:. start cvs ignore
-;; --------------------------------------------------
-;; |||:sec:||| CVS specialized parameters
-;; --------------------------------------------------
-
-(put 'CVS 'vc-functions nil)
-
-(unless (fboundp 'vc-cvs-find-ignore-file)
-(defun vc-cvs-ign-find-ignore-file (file)
-  "Return the ignore file for FILE."
-  (expand-file-name ".cvsignore" (if file (file-name-directory file))))
-(defalias 'vc-cvs-find-ignore-file 'vc-cvs-ign-find-ignore-file))
-
-(defvar vc-cvs-ign-ignore-param-glob
-  '(:escape: vc-cvs-ign-glob-escape :anchor: "" :trailer: "" :dir-trailer: "/")
-  "Ignore parameters for CVS partially anchored glob wildcards.")
-
-(defun vc-cvs-ign-ignore-param (&optional _ignore-file)
-  "Appropriate CVS ignore parameters for IGNORE-FILE."
-  vc-cvs-ign-ignore-param-glob)
-
-(defun vc-cvs-ign-glob-escape (string)
-  "Escape special glob characters and spaces in STRING."
-  (replace-regexp-in-string " " "?" (vc-ign-glob-escape string) t))
-
-;; .:lst:. end cvs ignore
 ;; .:lst:. start svn ignore
 ;; --------------------------------------------------
 ;; |||:sec:||| SVN specialized parameters
@@ -664,7 +617,11 @@ Otherwise, if FILE is a directory, the final slash is removed."
   vc-svn-ign-ignore-param-glob)
 
 (defun vc-svn-ign-modify-ignore-specs (pattern ignore-file remove)
-  ;; implements ‘vc-default-ign-modify-ignore-specs’ for SVN
+  "Implements ‘vc-default-ign-modify-ignore-specs’ for SVN.
+
+PATTERN is the string to be added to the ignore specifications of
+the IGNORE-FILE's directory, unless REMOVE is non-nil, in which
+case PATTERN is removed."
   (let* ((directory (file-name-directory ignore-file))
          (ignores (vc-svn-ign-ignore-completion-table directory))
          (ignores (if remove
@@ -690,9 +647,9 @@ Otherwise, if FILE is a directory, the final slash is removed."
 
 (defun vc-src-ign-glob-escape (string)
   "Escape special glob characters in STRING."
-  (if (string-match-p "[?*[]" string)
+  (if (vc-ign-string-match-p "[?*[]" string)
       (mapconcat (lambda (c)
-                   (or (pcase c
+                   (or (vc-ign-case c
                          (?? "[?]")
                          (?* "[*]")
                          (?\[ "[[]")
@@ -838,20 +795,20 @@ Otherwise, if FILE is a directory, the final slash is removed."
 
 (defvar vc-ign-menu-map
   (let ((map (make-sparse-keymap)))
-    (bindings--define-key map [vc-ign-ignore-pattern]
+    (vc-ign-bindings--define-key map [vc-ign-ignore-pattern]
       '(menu-item "VC Ignore Pattern..." vc-ign-ignore-pattern
                   :help "Ignore a pattern under current version control system"))
-    (bindings--define-key map [vc-ign-ignore-file]
+    (vc-ign-bindings--define-key map [vc-ign-ignore-file]
       '(menu-item "VC Ignore File..." vc-ign-ignore-file
                   :help "Ignore a file under current version control system"))
     map))
 
 (define-key vc-prefix-map "z" 'vc-ign-prefix-map)
-(bindings--define-key vc-menu-map [vc-ign-ignore] (cons "VC Ignore" vc-ign-menu-map))
+(vc-ign-bindings--define-key vc-menu-map [vc-ign-ignore] (cons "VC Ignore" vc-ign-menu-map))
 
 (when (boundp 'vc-dir-mode-map)
   (define-key vc-dir-mode-map  "z" 'vc-ign-prefix-map)
-  (bindings--define-key vc-dir-menu-map [vc-ign-ignore] (cons "VC Ignore" vc-ign-menu-map)))
+  (vc-ign-bindings--define-key vc-dir-menu-map [vc-ign-ignore] (cons "VC Ignore" vc-ign-menu-map)))
 
 ;; .:lst:. end integration
 
@@ -916,4 +873,15 @@ Otherwise, if FILE is a directory, the final slash is removed."
 ;; End:
 
 (provide 'vc-ign)
+
+(eval-and-compile
+  (let ((load-path
+         (cons (file-name-directory
+                (or load-file-name (buffer-file-name) "."))
+               load-path)))
+    (dolist (pkg '(vc-default-ign vc-cvs-ign vc-svn-ign vc-src-ign vc-bzr-ign vc-git-ign vc-hg-ign vc-mtn-ign))
+      (condition-case nil
+          (require pkg)
+        (error nil)))))
+
 ;;; vc-ign.el ends here
