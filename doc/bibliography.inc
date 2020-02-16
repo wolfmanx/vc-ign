@@ -40,9 +40,6 @@
 	       2019, from
 	       <https://en.wikipedia.org/w/index.php?title=Abbreviation&oldid=896285984>
 
-.. Citations from a Wikipedia article (inactive)
-.. (let ((url "https://en.wikipedia.org/wiki/Abbr")) (shell-command (concat "python ../bin/wp-citations.py '" url "'")))
-
 .. \|:here:|
 
 .. \||<-snip->|| stop
