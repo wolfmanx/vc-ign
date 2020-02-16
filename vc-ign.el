@@ -45,9 +45,7 @@
 
 (eval-and-compile
   (dolist (pkg '(dired vc vc-hooks vc-dir vc-svn vc-src vc-bzr vc-git vc-hg vc-mtn))
-    (condition-case err
-        (require pkg)
-      (error (message "error: %s (ignored)" (error-message-string err))))))
+    (condition-case nil (require pkg) (error nil))))
 
 ;; --------------------------------------------------
 ;; |||:sec:||| BACKPORT
