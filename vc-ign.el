@@ -509,6 +509,46 @@ Otherwise remove PATTERN from IGNORE-FILE."
 ;; |||:sec:||| Tools
 ;; --------------------------------------------------
 
+(defun vc-ign-deduce-current-file ()
+  "Deduce a the current files and a backend to which to apply an operation."
+  (list (vc-deduce-backend)
+        (cond
+         ((derived-mode-p 'vc-dir-mode)
+          (vc-dir-current-file))
+         ((derived-mode-p 'dired-mode)
+          (dired-get-filename))
+         (t (or (buffer-file-name) default-directory)))))
+
+(defun vc-ign-file-root-relative-name
+    (file &optional directory backend to-kill-ring)
+  "Get file name for FILE relative to root of VC.
+
+DIRECTORY defaults to `default-directory' and is used to
+determine the responsible VC backend, unless BACKEND is not-nil.
+
+When called interactively, or if TO-KILL-RING is non-nil, the
+result is placed on the ‘kill-ring’."
+
+  (interactive
+   (let* ((bf (vc-ign-deduce-current-file))
+          (backend (or (car bf) 'RCS))
+          (file (cadr bf)))
+     (list file nil backend t)))
+  (let* ((backend
+          (or backend
+              (let ((default-directory (or directory default-directory)))
+                (vc-deduce-backend))
+              'RCS))
+         (file (directory-file-name (expand-file-name file directory)))
+         (file-dir (file-name-directory file))
+         (root-dir (or (ignore-errors
+                         (vc-call-backend backend 'root file-dir))
+                       directory default-directory))
+         (relative-name (file-relative-name file root-dir))
+         (relative-name (if (string= relative-name ".") "" relative-name)))
+    (when to-kill-ring (kill-new relative-name))
+    relative-name))
+
 (defun vc-ign-expand-file-name (file &optional directory)
   "Call ‘expand-file-name’ with normalized FILE and DIRECTORY.
 
@@ -519,7 +559,8 @@ expansion, if FILE does not have a trailing slash."
           (string= file "..")
           (and (>= (length file) 2)
                (or (string= (substring file -2) "/.")
-                   (and (>= (length file) 3) (string= (substring file -3) "/..")))))
+                   (and (>= (length file) 3)
+                        (string= (substring file -3) "/..")))))
       (setq file (file-name-as-directory file)))
   (setq file (expand-file-name file directory))
   (if (and (not (vc-ign-has-final-slash file))
@@ -792,6 +833,7 @@ Otherwise, if FILE is a directory, the final slash is removed."
   (let ((map (make-sparse-keymap)))
     (define-key map "i" 'vc-ign-ignore-file)
     (define-key map "p" 'vc-ign-ignore-pattern)
+    (define-key map "w" 'vc-ign-file-root-relative-name)
     (define-key map "z" 'vc-ign-ignore-file)
     map))
 (fset 'vc-ign-prefix-map vc-ign-prefix-map)
