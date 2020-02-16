@@ -54,9 +54,6 @@
 
 ;; (insert (format "\n%S" (rx string-start (or "vc-"(or "default" "CVS" "SVN" "SRC" "Bzr" "Git" "Hg" "Mtn") "-ign"))))
 
-(unless (boundp 'package-lint--sane-prefixes)
-  (defvar package-lint--sane-prefixes ""))
-
 (defvar vc-ign-package-lint--sane-prefixes
   "\\`\\(?:vc-\\|\\(?:Bzr\\|CVS\\|Git\\|Hg\\|Mtn\\|S\\(?:RC\\|VN\\)\\|default\\)\\|-ign\\)"
   "Sane ‘vc-’ backend prefixes for package-lint.")
@@ -87,11 +84,14 @@ from:
 Therefore, the linter still reports other functions, that do not
 belong to this package."
   (interactive)
-  (let ((package-lint--sane-prefixes
-         (concat
-          package-lint--sane-prefixes
-          "\\|"
-          vc-ign-package-lint--sane-prefixes)))
+  (let* ((package-lint--sane-prefixes
+          (apply #'concat
+                 (delq nil
+                       (append
+                        (and (boundp 'package-lint--sane-prefixes)
+                             (list package-lint--sane-prefixes "\\|"))
+                        (list vc-ign-package-lint--sane-prefixes)))))
+         (_unused package-lint--sane-prefixes))
     (vc-ign-do-package-lint-current-buffer)))
 
 ;; .:lst:. end package-lint
