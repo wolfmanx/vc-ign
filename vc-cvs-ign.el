@@ -32,6 +32,7 @@
 
 ;;; Code:
 
+(provide 'vc-cvs-ign)
 (require 'vc-ign)
 
 ;; .:lst:. start cvs ignore
@@ -63,5 +64,4 @@
 
 ;; .:lst:. end cvs ignore
 
-(provide 'vc-cvs-ign)
 ;;; vc-cvs-ign.el ends here

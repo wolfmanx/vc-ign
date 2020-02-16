@@ -179,16 +179,6 @@ of the menu's data."
       (defalias 'vc-ign-vc-dir-resynch-file 'vc-dir-resynch-file)
     (defun vc-ign-vc-dir-resynch-file (&rest _args)))
 
-  (defun vc-default-ign-ignore-completion-table (backend file)
-    "Return the list of ignored files under BACKEND based on FILE."
-    (vc-ign-delete-if
-     (lambda (str)
-       ;; Commented or empty lines.
-       (vc-ign-string-match-p "\\`\\(?:#\\|[ \t\r\n]*\\'\\)" str))
-     (let ((file (vc-call-backend backend 'ign-find-ignore-file file)))
-       (and (file-exists-p file)
-            (vc-ign--read-lines file)))))
-
   (if (fboundp 'vc--read-lines)
       (defalias 'vc-ign--read-lines 'vc--read-lines)
     (defun vc-ign--read-lines (file)
@@ -431,10 +421,6 @@ ignore patterns (default is an empty string).")
 (defvar vc-ign-ignore-param-regexp
   '(:escape: regexp-quote :anchor: "^" :trailer: "$" :dir-trailer: "/")
   "Ignore parameters for anchored regular expressions.")
-
-(defun vc-default-ign-ignore-param (_backend &optional _ignore-file)
-  "Default ignore parameters for IGNORE-FILE."
-  vc-ign-ignore-param-glob)
 
 (defun vc-ign-glob-escape (string)
   "Escape special glob characters in STRING."

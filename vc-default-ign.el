@@ -32,13 +32,35 @@
 
 ;;; Code:
 
+(provide 'vc-default-ign)
+(require 'vc-ign)
+
+;; .:lst:. start backport
+;; --------------------------------------------------
+;; |||:sec:||| BACKPORT
+;; --------------------------------------------------
+
+(eval-and-compile
+  (defun vc-default-ign-ignore-completion-table (backend file)
+    "Return the list of ignored files under BACKEND based on FILE."
+    (vc-ign-delete-if
+     (lambda (str)
+       ;; Commented or empty lines.
+       (vc-ign-string-match-p "\\`\\(?:#\\|[ \t\r\n]*\\'\\)" str))
+     (let ((file (vc-call-backend backend 'ign-find-ignore-file file)))
+       (and (file-exists-p file)
+            (vc-ign--read-lines file))))))
+
+;; .:lst:. end backport
 ;; .:lst:. start default
 ;; --------------------------------------------------
 ;; |||:sec:||| Default
 ;; --------------------------------------------------
 
 (defun vc-default-ign-ignore (backend pattern-or-file &optional directory remove is-file)
-  ;; implements ‘vc-ign-ignore’ generically
+  "Implements ‘vc-ign-ignore’ generically.
+BACKEND is the current backend.  Parameters PATTERN-OR-FILE,
+DIRECTORY, REMOVE, IS-FILE are passed on from ‘vc-ign-ignore’."
   (apply #'vc-call-backend backend 'ign-modify-ignore-specs
          (vc-call-backend backend 'ign-get-ignore-file-and-pattern
                           pattern-or-file directory is-file remove)))
@@ -112,6 +134,15 @@ Otherwise remove PATTERN from IGNORE-FILE."
   (vc-call-backend backend 'find-ignore-file file))
 
 ;; .:lst:. end default
+;; .:lst:. start generic ignore
+;; --------------------------------------------------
+;; |||:sec:||| Generic ignore parameters
+;; --------------------------------------------------
 
-(provide 'vc-default-ign)
+(defun vc-default-ign-ignore-param (_backend &optional _ignore-file)
+  "Default ignore parameters for IGNORE-FILE."
+  vc-ign-ignore-param-glob)
+
+;; .:lst:. end generic ignore
+
 ;;; vc-default-ign.el ends here
