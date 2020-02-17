@@ -43,8 +43,6 @@
 (put 'Bzr 'vc-functions nil)
 (put 'BZR 'vc-functions nil)
 
-(declare-function 'vc-bzr-root "vc-bzr" (file) t)
-
 (defun vc-bzr-ign-find-ignore-file (file)
   "Return the root directory of the repository of FILE."
   (expand-file-name ".bzrignore" (vc-bzr-root file)))

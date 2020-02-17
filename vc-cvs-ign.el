@@ -56,8 +56,6 @@
   "Appropriate CVS ignore parameters for IGNORE-FILE."
   vc-cvs-ign-ignore-param-glob)
 
-(declare-function 'vc-ign-glob-escape "vc-ign")
-
 (defun vc-cvs-ign-glob-escape (string)
   "Escape special glob characters and spaces in STRING."
   (replace-regexp-in-string " " "?" (vc-ign-glob-escape string) t))
