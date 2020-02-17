@@ -91,7 +91,7 @@ the `Sphinx HTML build directory <@doc_dir@/_build/html/>`_
   :defun:`vc-dir-mode` and :kbd:`C-x v z` in other modes. The prefix
   can be customized with :data:`vc-ign-prefix`.
 
-- Press :kbd:`z z` in :defun:`vc-dir-mode` or :kbd:`C-x v z z` in
+- Press :kbd:`z i` in :defun:`vc-dir-mode` or :kbd:`C-x v z i` in
   :defun:`dired-mode` to ignore marked files. In other modes, a file
   is read from the minibuffer. With a prefix argument, the files are
   removed from the ignore file.
@@ -102,10 +102,15 @@ the `Sphinx HTML build directory <@doc_dir@/_build/html/>`_
   minibuffer. With a prefix argument, the pattern is removed from the
   ignore file
 
-- Press :kbd:`z w` in :defun:`vc-dir-mode` or :kbd:`C-x v z w` in
-  other modes to push the marked file names relatve to the repository
+- Press :kbd:`z c` in :defun:`vc-dir-mode` or :kbd:`C-x v z c` in
+  other modes to push the current filename relatve to the repository
   root onto the :data:`kill-ring`. With a prefix argument, escape and
-  anchor the file names. The file names are concatenated with a
+  anchor the filename.
+
+- Press :kbd:`z w` in :defun:`vc-dir-mode` or :kbd:`C-x v z w` in
+  other modes to push the marked filenames relatve to the repository
+  root onto the :data:`kill-ring`. With a prefix argument, escape and
+  anchor the filenames. The filenames are concatenated with a
   newline.
 
 .. \|:here:|

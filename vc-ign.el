@@ -35,7 +35,7 @@
 ;;   and `C-x v z` in other modes.  The prefix can be customized with
 ;;   *vc-ign-prefix*.
 ;,
-;; - Press `z z` in ‘vc-dir-mode’ or `C-x v z z` in ‘dired-mode’ to
+;; - Press `z i` in ‘vc-dir-mode’ or `C-x v z i` in ‘dired-mode’ to
 ;;   ignore marked files.  In other modes, a file is read from the
 ;;   minibuffer.  With a prefix argument, the files are removed from
 ;;   the ignore file.
@@ -45,10 +45,15 @@
 ;;   modes, a pattern is read from the minibuffer.  With a prefix
 ;;   argument, the pattern is removed from the ignore file
 
+;; - Press `z c` in *vc-dir-mode* or `C-x v z c` in other modes to
+;;   push the current filename relatve to the repository root onto
+;;   the *kill-ring*.  With a prefix argument, escape and anchor the
+;;   filename.
+
 ;; - Press `z w` in ‘vc-dir-mode’ or `C-x v z w` in other modes to
-;;   push the marked file names relatve to the repository root onto
+;;   push the marked filenames relatve to the repository root onto
 ;;   the ‘kill-ring’.  With a prefix argument, escape and anchor the
-;;   file names.  The file names are concatenated with a newline.
+;;   filenames.  The filenames are concatenated with a newline.
 
 ;;; Code:
 
@@ -317,21 +322,40 @@ patterns from the ignore file."
     (vc-ign-ignore pattern directory remove nil)))
 
 (defun vc-ign-file-root-relative-name
-    (files &optional directory backend to-kill-ring escape)
-  "Get file names for FILES relative to root of VC.
+    (file &optional directory backend to-kill-ring escape)
+  "Get filename for FILE relative to root of VC.
 
 DIRECTORY defaults to `default-directory' and is used to
 determine the responsible VC backend, unless BACKEND is not-nil.
 
-The files are concatenated with a newline.
+When called interactively, or if TO-KILL-RING is non-nil, the
+file is placed on the ‘kill-ring’.
+
+If ESCAPE is non-nil (prefix, if interactive), the filename is
+escaped and anchored for BACKEND."
+  (interactive
+   (let* ((bf (vc-ign-deduce-current-file))
+          (backend (or (car bf) 'RCS))
+          (file (car (cadr bf))))
+     (list file nil backend t current-prefix-arg)))
+  (vc-ign-file-root-relative-names
+   (and file (list file)) directory backend to-kill-ring escape))
+
+(defun vc-ign-file-root-relative-names
+    (files &optional directory backend to-kill-ring escape)
+  "Get filenames for FILES relative to root of VC.
+
+DIRECTORY defaults to `default-directory' and is used to
+determine the responsible VC backend, unless BACKEND is not-nil.
 
 When called interactively, or if TO-KILL-RING is non-nil, the
-result is placed on the ‘kill-ring’.
+files are concatenated with a newline.and placed on the
+‘kill-ring’.
 
 If ESCAPE is non-nil (prefix, if interactive), the filenames are
 escaped and anchored for BACKEND."
   (interactive
-   (let* ((bf (vc-ign-vc-deduce-fileset))
+   (let* ((bf (vc-ign-vc-deduce-fileset t t))
           (backend (or (car bf) 'RCS))
           (files (cadr bf)))
      (list files nil backend t current-prefix-arg)))
@@ -343,14 +367,14 @@ escaped and anchored for BACKEND."
               'RCS))
          (indx (if escape 2 1))
          (relative-names
-          (mapconcat
+          (mapcar
            #'(lambda (file)
                (nth indx
                     (vc-call-backend
                      backend 'ign-get-ignore-file-and-pattern
                      file directory t nil)))
-           files "\n")))
-    (when to-kill-ring (kill-new relative-names))
+           files)))
+    (when to-kill-ring (kill-new (mapconcat #'identity relative-names "\n")))
     relative-names))
 
 ;; .:lst:. end ui
@@ -515,13 +539,13 @@ Ported from Python v3.7"
 
 (defun vc-ign-deduce-current-file (&optional not-buffer)
   "Deduce a the current files and a backend to which to apply an operation.
-If NOT-BUFFER is not nil, do not use buffer file name as candidate."
+If NOT-BUFFER is not nil, do not use buffer filename as candidate."
   (list (vc-deduce-backend)
         (cond
          ((derived-mode-p 'vc-dir-mode) (list (vc-dir-current-file)))
          ((derived-mode-p 'dired-mode) (dired-get-marked-files nil t))
-         (t (or (and (not not-buffer) (buffer-file-name))
-                default-directory)))))
+         (t (list (or (and (not not-buffer) (buffer-file-name))
+                      default-directory))))))
 ;; (let ((d default-directory))  (equal (vc-default-ign-get-ignore-file-and-pattern 'Git nil d t) (vc-default-ign-get-ignore-file-and-pattern 'Git d d t))) => t
 
 (defun vc-ign-expand-file-name (file &optional directory)
@@ -581,7 +605,7 @@ is non-nil, its parent directory is returned."
             path)))))
 
 (defun vc-ign-file-relative-name (file &optional dir dir-is-empty)
-  "Get relative file name for FILE against DIR.
+  "Get relative filename for FILE against DIR.
 If FILE is a directory and DIR-IS-EMPTY is non-nil, nil is returned.
 Otherwise, if FILE is a directory, the final slash is removed."
   (and (not (and dir-is-empty (file-directory-p file)))
@@ -628,8 +652,9 @@ The shortcuts are bund to this key sequence in variables
   (let ((map (make-sparse-keymap)))
     (define-key map "i" 'vc-ign-ignore-file)
     (define-key map "p" 'vc-ign-ignore-pattern)
-    (define-key map "w" 'vc-ign-file-root-relative-name)
-    (define-key map "z" 'vc-ign-ignore-file)
+    (define-key map "c" 'vc-ign-file-root-relative-name)
+    (define-key map "w" 'vc-ign-file-root-relative-names)
+    (define-key map "z" 'vc-ign-file-root-relative-name)
     map))
 (fset 'vc-ign-prefix-map vc-ign-prefix-map)
 
