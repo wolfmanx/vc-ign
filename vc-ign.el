@@ -44,16 +44,31 @@
 ;;   prompt with the current file as properly quoted pattern.  In other
 ;;   modes, a pattern is read from the minibuffer.  With a prefix
 ;;   argument, the pattern is removed from the ignore file
-
+;;
 ;; - Press `z c` in *vc-dir-mode* or `C-x v z c` in other modes to
 ;;   push the current filename relatve to the repository root onto
 ;;   the *kill-ring*.  With a prefix argument, escape and anchor the
 ;;   filename.
-
+;;
 ;; - Press `z w` in ‘vc-dir-mode’ or `C-x v z w` in other modes to
 ;;   push the marked filenames relatve to the repository root onto
 ;;   the ‘kill-ring’.  With a prefix argument, escape and anchor the
 ;;   filenames.  The filenames are concatenated with a newline.
+;;
+;; - Several directory/filename copy commands are mapped as shortcuts:
+;;
+;;   ------------------------------------------------------------------------
+;;   Key sequence description
+;;   ------------ -----------------------------------------------------------
+;;   z d d        copy directory to *kill-ring*
+;;   z d b        copy basename of current file to *kill-ring*
+;;   z d f        copy filename of current file to *kill-ring*
+;;   z o d        copy directory of other window to *kill-ring*
+;;   z o b        copy basename of current file in other window to
+;;                *kill-ring*
+;;   z o f        copy filename of current file in other window to
+;;                *kill-ring*
+;;   ------------------------------------------------------------------------
 
 ;;; Code:
 
@@ -377,6 +392,70 @@ escaped and anchored for BACKEND."
     (when to-kill-ring (kill-new (mapconcat #'identity relative-names "\n")))
     relative-names))
 
+(defun vc-ign-copy-directory-other-window (directory)
+  "Push DIRECTORY to ‘kill-ring’.
+When called interactively, ‘default-directory’ of other window is
+used."
+  (interactive
+   (save-window-excursion
+    (other-window 1)
+    (list default-directory)))
+  (vc-ign-copy-directory directory))
+
+(defun vc-ign-copy-file-name-nondirectory-other-window (file)
+  "Copy basename of FILE to ‘kill-ring’.
+When called interactive, the current filename is deduced."
+  (interactive
+   (save-window-excursion
+    (other-window 1)
+    (let* ((bf (vc-ign-deduce-current-file))
+           (file (car (cadr bf))))
+      (list file))))
+  (vc-ign-copy-file-name file t))
+
+(defun vc-ign-copy-file-name-other-window (file &optional nondirectory)
+  "Copy name of FILE to ‘kill-ring’.
+
+If NONDIRECTORY (prefix, if interactive) is non-nil, copy only
+basename."
+  (interactive
+   (save-window-excursion
+    (other-window 1)
+    (let* ((bf (vc-ign-deduce-current-file))
+           (file (car (cadr bf))))
+      (list file current-prefix-arg))))
+  (kill-new (if nondirectory
+                (file-name-nondirectory file)
+              file)))
+
+(defun vc-ign-copy-directory (directory)
+  "Push DIRECTORY to ‘kill-ring’.
+When called interactively, ‘default-directory’ is used."
+  (interactive (list default-directory))
+  (kill-new directory))
+
+(defun vc-ign-copy-file-name-nondirectory (file)
+  "Copy basename of FILE to ‘kill-ring’.
+When called interactive, the current filename is deduced."
+  (interactive
+   (let* ((bf (vc-ign-deduce-current-file))
+          (file (car (cadr bf))))
+     (list file)))
+  (vc-ign-copy-file-name file t))
+
+(defun vc-ign-copy-file-name (file &optional nondirectory)
+  "Copy name of FILE to ‘kill-ring’.
+
+If NONDIRECTORY (prefix, if interactive) is non-nil, copy only
+basename."
+  (interactive
+   (let* ((bf (vc-ign-deduce-current-file))
+          (file (car (cadr bf))))
+     (list file current-prefix-arg)))
+  (kill-new (if nondirectory
+                (file-name-nondirectory file)
+              file)))
+
 ;; .:lst:. end ui
 ;; .:lst:. start frontend
 ;; --------------------------------------------------
@@ -655,6 +734,12 @@ The shortcuts are bund to this key sequence in variables
     (define-key map "c" 'vc-ign-file-root-relative-name)
     (define-key map "w" 'vc-ign-file-root-relative-names)
     (define-key map "z" 'vc-ign-file-root-relative-name)
+    (define-key map "dd" 'vc-ign-copy-directory)
+    (define-key map "df" 'vc-ign-copy-file-name)
+    (define-key map "db" 'vc-ign-copy-file-name-nondirectory)
+    (define-key map "od" 'vc-ign-copy-directory-other-window)
+    (define-key map "of" 'vc-ign-copy-file-name-other-window)
+    (define-key map "ob" 'vc-ign-copy-file-name-nondirectory-other-window)
     map))
 (fset 'vc-ign-prefix-map vc-ign-prefix-map)
 

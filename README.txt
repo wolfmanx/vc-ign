@@ -113,6 +113,24 @@ the `Sphinx HTML build directory <@doc_dir@/_build/html/>`_
   anchor the filenames. The filenames are concatenated with a
   newline.
 
+- Several directory/filename copy commands are mapped as shortcuts:
+
+  +--------------+--------------------------------------------------------------------+
+  | Key sequence | description                                                        |
+  +==============+====================================================================+
+  | z d d        | copy directory to :data:`kill-ring`                                |
+  +--------------+--------------------------------------------------------------------+
+  | z d b        | copy basename of current file to :data:`kill-ring`                 |
+  +--------------+--------------------------------------------------------------------+
+  | z d f        | copy filename of current file to :data:`kill-ring`                 |
+  +--------------+--------------------------------------------------------------------+
+  | z o d        | copy directory of other window to :data:`kill-ring`                |
+  +--------------+--------------------------------------------------------------------+
+  | z o b        | copy basename of current file in other window to :data:`kill-ring` |
+  +--------------+--------------------------------------------------------------------+
+  | z o f        | copy filename of current file in other window to :data:`kill-ring` |
+  +--------------+--------------------------------------------------------------------+
+
 .. \|:here:|
 
 .. \||<-snap->|| not_doc_md
