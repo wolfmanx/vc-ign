@@ -266,6 +266,30 @@ Original function ‘vc-responsible-backend’.")
         (save-buffer))))
 
 ;; .:lst:. end repair
+
+(defmacro vc-ign-show-errors (&rest body)
+  "Evaluate BODY protected, showing errors."
+    `(condition-case err
+        ,@body
+      (error (message ";; error: %s (ignored)" (error-message-string err)))))
+
+(defvar vc-ign-default-backend nil
+  "Default backend, bound locally.")
+
+(defmacro vc-ign-with-default-backend (default-backend &rest body)
+  "Evaluate BODY.
+If DEFAULT-BACKEND is nil, evaluate BODY unprotected, otherwise
+activate default backend functions."
+  `(if (not ,default-backend)
+       (progn ,@body)
+     (let ((vc-ign-default-backend ,default-backend)
+           (vc-handled-backends (cons ,default-backend vc-handled-backends)))
+       (vc-ign-letf (((symbol-function 'vc-responsible-backend)
+                      #'(lambda (file) (vc-ign-responsible-backend-default file)))
+                     ((symbol-function 'vc-backend-for-registration)
+                      #'(lambda (file) (vc-ign-backend-for-registration-default file))))
+         (vc-ign-show-errors ,@body)))))
+
 ;; .:lst:. start ui
 ;; --------------------------------------------------
 ;; |||:sec:||| User Interface
@@ -359,7 +383,7 @@ patterns from the ignore file."
     (vc-ign-ignore pattern directory remove nil)))
 
 (defun vc-ign-file-root-relative-name
-    (file &optional directory backend to-kill-ring escape)
+    (file &optional directory backend to-kill-ring escape default-backend)
   "Get filename for FILE relative to root of VC.
 
 DIRECTORY defaults to `default-directory' and is used to
@@ -369,17 +393,21 @@ When called interactively, or if TO-KILL-RING is non-nil, the
 file is placed on the ‘kill-ring’.
 
 If ESCAPE is non-nil (prefix, if interactive), the filename is
-escaped and anchored for BACKEND."
+escaped and anchored for BACKEND.
+
+If DEFAULT-BACKEND is nil, run unprotected, otherwise activate
+default backend functions."
   (interactive
-   (let* ((bf (vc-ign-deduce-current-file))
-          (backend (or (car bf) 'RCS))
+   (let* ((escape current-prefix-arg)
+          (bf (vc-ign-deduce-current-file nil 'SRC))
+          (backend (or (car bf) 'SRC))
           (file (car (cadr bf))))
-     (list file nil backend t current-prefix-arg)))
+     (list file nil backend t escape 'SRC)))
   (vc-ign-file-root-relative-names
-   (and file (list file)) directory backend to-kill-ring escape))
+   (and file (list file)) directory backend to-kill-ring escape default-backend))
 
 (defun vc-ign-file-root-relative-names
-    (files &optional directory backend to-kill-ring escape)
+    (files &optional directory backend to-kill-ring escape default-backend)
   "Get filenames for FILES relative to root of VC.
 
 DIRECTORY defaults to `default-directory' and is used to
@@ -390,28 +418,36 @@ files are concatenated with a newline.and placed on the
 ‘kill-ring’.
 
 If ESCAPE is non-nil (prefix, if interactive), the filenames are
-escaped and anchored for BACKEND."
+escaped and anchored for BACKEND.
+
+If DEFAULT-BACKEND is nil, run unprotected, otherwise activate
+default backend functions."
   (interactive
-   (let* ((bf (vc-ign-vc-deduce-fileset t t))
-          (backend (or (car bf) 'RCS))
+   (let* ((escape current-prefix-arg)
+          (bf (vc-ign-deduce-fileset t t nil 'SRC))
+          (backend (or (car bf) 'SRC))
           (files (cadr bf)))
-     (list files nil backend t current-prefix-arg)))
+     (when (not files)
+       (setq bf (vc-ign-deduce-current-file nil 'SRC))
+       (setq backend (or (car bf) 'SRC))
+       (setq files (cadr bf)))
+     (list files nil backend t escape 'SRC)))
   (let* ((directory (or directory default-directory))
          (backend
-          (or backend
-              (let ((default-directory directory))
-                (vc-deduce-backend))
-              'RCS))
+          (let ((default-directory directory))
+            (or backend (vc-ign-deduce-backend default-backend))))
          (indx (if escape 2 1))
          (relative-names
-          (mapcar
-           #'(lambda (file)
-               (nth indx
-                    (vc-call-backend
-                     backend 'ign-get-ignore-file-and-pattern
-                     file directory t nil)))
-           files)))
-    (when to-kill-ring (kill-new (mapconcat #'identity relative-names "\n")))
+           (delq nil
+                 (mapcar
+                  #'(lambda (file)
+                      (nth indx
+                           (vc-call-backend
+                            backend 'ign-get-ignore-file-and-pattern
+                            file directory t nil)))
+                  files))))
+    (when to-kill-ring
+      (kill-new (mapconcat #'identity relative-names "\n")))
     relative-names))
 
 (defun vc-ign-copy-directory-other-window (directory)
@@ -430,7 +466,7 @@ When called interactive, the current filename is deduced."
   (interactive
    (save-window-excursion
     (other-window 1)
-    (let* ((bf (vc-ign-deduce-current-file))
+    (let* ((bf (vc-ign-deduce-current-file nil 'SRC))
            (file (car (cadr bf))))
       (list file))))
   (vc-ign-copy-file-name file t))
@@ -443,24 +479,24 @@ basename."
   (interactive
    (save-window-excursion
     (other-window 1)
-    (let* ((bf (vc-ign-deduce-current-file))
+    (let* ((bf (vc-ign-deduce-current-file nil 'SRC))
            (file (car (cadr bf))))
       (list file current-prefix-arg))))
-  (kill-new (if nondirectory
-                (file-name-nondirectory file)
-              file)))
+  (vc-ign-copy-file-name file nondirectory))
 
 (defun vc-ign-copy-directory (directory)
   "Push DIRECTORY to ‘kill-ring’.
 When called interactively, ‘default-directory’ is used."
   (interactive (list default-directory))
-  (kill-new directory))
+  (if directory
+      (kill-new (expand-file-name directory))
+    (error "No directory specified")))
 
 (defun vc-ign-copy-file-name-nondirectory (file)
   "Copy basename of FILE to ‘kill-ring’.
 When called interactive, the current filename is deduced."
   (interactive
-   (let* ((bf (vc-ign-deduce-current-file))
+   (let* ((bf (vc-ign-deduce-current-file nil 'SRC))
           (file (car (cadr bf))))
      (list file)))
   (vc-ign-copy-file-name file t))
@@ -471,12 +507,15 @@ When called interactive, the current filename is deduced."
 If NONDIRECTORY (prefix, if interactive) is non-nil, copy only
 basename."
   (interactive
-   (let* ((bf (vc-ign-deduce-current-file))
+   (let* ((nondirectory current-prefix-arg)
+          (bf (vc-ign-deduce-current-file nil 'SRC))
           (file (car (cadr bf))))
-     (list file current-prefix-arg)))
-  (kill-new (if nondirectory
-                (file-name-nondirectory file)
-              file)))
+     (list file nondirectory)))
+  (if file
+      (kill-new (if nondirectory
+                    (file-name-nondirectory (directory-file-name file))
+                  file))
+    (error "No file specified")))
 
 ;; .:lst:. end ui
 ;; .:lst:. start frontend
@@ -517,14 +556,14 @@ and anchored by the VC backend."
   "Ignore file set under a version control system..
 
 If FILESET is not given, it is deduced with
-‘vc-ign-vc-deduce-fileset’.
+‘vc-ign-deduce-fileset’.
 
 When REMOVE is non-nil, remove the files from the list of ignored
 files.
 
 If PROMPT is non-nil, confirm the operation.  If the confirmation
 is negative, do not perform the ignore operation."
-  (let* ((fileset-arg (or fileset (vc-ign-vc-deduce-fileset t t)))
+  (let* ((fileset-arg (or fileset (vc-ign-deduce-fileset t t)))
          (backend (car fileset-arg))
          (files (delq nil (nth 1 fileset-arg)))
          (msg-strings (if remove
@@ -638,16 +677,80 @@ Ported from Python v3.7"
 ;; |||:sec:||| Tools
 ;; --------------------------------------------------
 
-(defun vc-ign-deduce-current-file (&optional not-buffer)
-  "Deduce a the current files and a backend to which to apply an operation.
-If NOT-BUFFER is not nil, do not use buffer filename as candidate."
-  (list (vc-deduce-backend)
+;; Overrides with default backend
+
+;; |:here:|
+
+(defun vc-ign-deduce-fileset (&optional observer allow-unregistered
+                                        state-model-only-files
+                                        default-backend)
+  "Deduce a set of files and a backend to which to apply an operation.
+Return (BACKEND FILESET FILESET-ONLY-FILES STATE CHECKOUT-MODEL).
+
+OBSERVER, ALLOW-UNREGISTERED, STATE-MODEL-ONLY-FILES are passed on to
+‘vc-ign-vc-deduce-fileset’.
+
+If DEFAULT-BACKEND is non-nil, temporarily bind
+- DEFAULT-BACKEND to ‘vc-ign-default-backend’,
+- ‘vc-backend-for-registration’ to ‘vc-ign-responsible-backend-default’,
+- ‘vc-backend-for-registration’ to ‘vc-ign-backend-for-registration-default’,"
+  (vc-ign-with-default-backend
+   default-backend
+   (vc-ign-vc-deduce-fileset observer allow-unregistered state-model-only-files)))
+
+(defun vc-ign--deduce-current-file (&optional not-buffer default-backend)
+  "Deduce the current file and a backend to which to apply an operation.
+If NOT-BUFFER is not nil, do not use buffer filename as candidate.
+If DEFAULT-BACKEND is supplied, do not fail, if there is no
+responsible backend."
+  (list (vc-ign-deduce-backend)
         (cond
          ((derived-mode-p 'vc-dir-mode) (list (vc-dir-current-file)))
          ((derived-mode-p 'dired-mode) (dired-get-marked-files nil t))
-         (t (list (or (and (not not-buffer) (buffer-file-name))
+         (t (list (or (and (not not-buffer)
+                           (or (buffer-file-name)
+                               (and default-backend "")))
                       default-directory))))))
+
+(defun vc-ign-deduce-current-file (&optional not-buffer default-backend)
+  "Deduce the current file and a backend to which to apply an operation.
+If NOT-BUFFER is not nil, do not use buffer filename as candidate.
+If DEFAULT-BACKEND is supplied, do not fail, if there is no
+responsible backend."
+  (vc-ign-with-default-backend
+   default-backend
+   (vc-ign--deduce-current-file not-buffer default-backend)))
+
 ;; (let ((d default-directory))  (equal (vc-default-ign-get-ignore-file-and-pattern 'Git nil d t) (vc-default-ign-get-ignore-file-and-pattern 'Git d d t))) => t
+
+(defun vc-ign-deduce-backend (&optional default-backend)
+  "Deduce responsible backend.
+If DEFAULT-BACKEND is non-nil and no backend is found return
+DEFAULT-BACKEND."
+  (if (not default-backend)
+      (vc-ign-vc-deduce-backend)
+    (or (ignore-errors (vc-ign-vc-deduce-backend))
+        default-backend)))
+
+(defun vc-ign-responsible-backend-default (file)
+  "Return the name of a backend system that is responsible for FILE.
+If no backend is responsible, return ‘vc-ign-default-backend’."
+  (or (ignore-errors (vc-ign-vc-responsible-backend file))
+      vc-ign-default-backend))
+
+(defun vc-ign-backend-for-registration-default (file)
+  "Return a backend that can be used for registering FILE.
+If no backend was found, return ‘vc-ign-default-backend’."
+  (catch 'found
+    ;; First try: find a responsible backend, it must be a backend
+    ;; under which FILE is not yet registered.
+    (dolist (backend vc-handled-backends)
+      (and (not (vc-call-backend backend 'registered file))
+           (vc-call-backend backend 'responsible-p file)
+           (throw 'found backend)))
+    vc-ign-default-backend))
+
+;; |:here:|
 
 (defun vc-ign-expand-file-name (file &optional directory)
   "Call ‘expand-file-name’ with normalized FILE and DIRECTORY.
