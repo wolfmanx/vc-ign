@@ -5,7 +5,10 @@ srcdir = .
 
 EXTRA_DIST = README.md
 
-CLEANFILES = README.md
+CLEANFILES =
+CLEANFILES += *.elc */*.elc
+
+DISTCLEANFILES = README.md
 
 DISTFILES =
 DISTFILES += Makefile
