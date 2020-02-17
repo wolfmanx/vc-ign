@@ -21,6 +21,8 @@ clean:
 	test -z '$(CLEANFILES)' || rm -rf $(CLEANFILES)
 
 install: all
+	mkdir -p "${HOME}/.emacs.def/vc-ign/"
+	cp -p *.el "${HOME}/.emacs.def/vc-ign/"
 
 dist:
 
