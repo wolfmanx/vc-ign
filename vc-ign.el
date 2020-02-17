@@ -73,8 +73,13 @@
 ;;; Code:
 
 (eval-and-compile
+  ;; This is for ancient emacsen, like 22.1.
+  (eval (read "(condition-case nil (require 'cl-lib) (error (require 'cl)))"))
   (dolist (pkg '(dired vc vc-hooks vc-dir vc-svn vc-src vc-bzr vc-git vc-hg vc-mtn))
     (condition-case nil (require pkg) (error nil))))
+
+;; provide 'vc-src for directory/file operations, if it was not found
+(provide 'vc-src)
 
 ;; .:lst:. start package-lint
 ;; --------------------------------------------------
@@ -130,20 +135,23 @@ belong to this package."
 ;; --------------------------------------------------
 
 ;;; Compatibility
-;; vc-call-backend             22
-;; vc-deduce-fileset           22
-;; vc-dir-current-file         23
-;; vc-dir-menu-map             23
-;; vc-dir-mode-map             23
-;; vc-dir-move-to-goal-column  23
-;; vc-dir-resynch-file         22
-;; vc-dired-deduce-fileset     22
-;; vc-menu-map                 22
-;; vc-mtn-root                 22
-;; vc-prefix-map               22
-;; vc-responsible-backend      22
-;; vc-svn-command              22
-;; vc--read-lines              22
+
+;; vc--read-lines
+;; vc-backend-for-registration
+;; vc-call-backend
+;; vc-deduce-backend
+;; vc-deduce-fileset
+;; vc-dir-current-file
+;; vc-dir-menu-map
+;; vc-dir-mode
+;; vc-dir-mode-map
+;; vc-dir-move-to-goal-column
+;; vc-dir-resynch-file
+;; vc-dired-deduce-fileset
+;; vc-handled-backends
+;; vc-menu-map
+;; vc-prefix-map
+;; vc-responsible-backend
 
 (eval-and-compile
   (if (fboundp 'string-match-p)
@@ -165,6 +173,10 @@ belong to this package."
     (if (fboundp 'cl-case)
         (defalias 'vc-ign-case 'cl-case)
       (defalias 'vc-ign-case 'case)))
+
+  (if (fboundp 'cl-letf)
+      (defalias 'vc-ign-letf 'cl-letf)
+    (defalias 'vc-ign-letf 'letf))
 
   (if (fboundp 'bindings--define-key)
       (defalias 'vc-ign-bindings--define-key 'bindings--define-key)
@@ -190,6 +202,16 @@ of the menu's data."
                           ,@(purecopy (nthcdr 3 item)))
             (purecopy item)))
          (t (message "non-menu-item: %S" item) item)))))
+
+  (defun vc-ign-vc-responsible-backend (_file)
+    "Return the name of a backend system that is responsible for FILE.
+Original function ‘vc-responsible-backend’.")
+  (fset 'vc-ign-vc-responsible-backend (symbol-function 'vc-responsible-backend))
+
+  (if (fboundp 'vc-deduce-backend)
+      (defalias 'vc-ign-vc-deduce-backend 'vc-deduce-backend)
+    (defun vc-ign-vc-deduce-backend ()
+      (vc-responsible-backend default-directory)))
 
   (if (fboundp 'vc-deduce-fileset)
       (defalias 'vc-ign-vc-deduce-fileset 'vc-deduce-fileset)
