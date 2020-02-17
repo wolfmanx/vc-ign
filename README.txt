@@ -87,6 +87,10 @@ the `Sphinx HTML build directory <@doc_dir@/_build/html/>`_
 - Load :file:`vc-ign.el` to augment Emacs package :mod:`vc` with VC
   ignore facilities.
 
+- The keyboard shortcuts are bound to prefix :kbd:`z` in
+  :defun:`vc-dir-mode` and :kbd:`C-x v z` in other modes. The prefix
+  can be customized with :data:`vc-ign-prefix`.
+
 - Press :kbd:`z z` in :defun:`vc-dir-mode` or :kbd:`C-x v z z` in
   :defun:`dired-mode` to ignore marked files. In other modes, a file
   is read from the minibuffer. With a prefix argument, the files are
@@ -97,6 +101,12 @@ the `Sphinx HTML build directory <@doc_dir@/_build/html/>`_
   quoted pattern. In other modes, a pattern is read from the
   minibuffer. With a prefix argument, the pattern is removed from the
   ignore file
+
+- Press :kbd:`z w` in :defun:`vc-dir-mode` or :kbd:`C-x v z w` in
+  other modes to push the marked file names relatve to the repository
+  root onto the :data:`kill-ring`. With a prefix argument, escape and
+  anchor the file names. The file names are concatenated with a
+  newline.
 
 .. \|:here:|
 

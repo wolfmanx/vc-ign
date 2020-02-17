@@ -31,6 +31,10 @@
 ;; Load `vc-ign.el` to augment Emacs package ‘vc’ with VC ignore
 ;; facilities.
 ;;
+;; - The keyboard shortcuts are bound to prefix `z` in *vc-dir-mode*
+;;   and `C-x v z` in other modes.  The prefix can be customized with
+;;   *vc-ign-prefix*.
+;,
 ;; - Press `z z` in ‘vc-dir-mode’ or `C-x v z z` in ‘dired-mode’ to
 ;;   ignore marked files.  In other modes, a file is read from the
 ;;   minibuffer.  With a prefix argument, the files are removed from
@@ -40,6 +44,11 @@
 ;;   prompt with the current file as properly quoted pattern.  In other
 ;;   modes, a pattern is read from the minibuffer.  With a prefix
 ;;   argument, the pattern is removed from the ignore file
+
+;; - Press `z w` in ‘vc-dir-mode’ or `C-x v z w` in other modes to
+;;   push the marked file names relatve to the repository root onto
+;;   the ‘kill-ring’.  With a prefix argument, escape and anchor the
+;;   file names.  The file names are concatenated with a newline.
 
 ;;; Code:
 
@@ -277,20 +286,22 @@ patterns from the ignore file."
           (is-dired-mode (derived-mode-p 'dired-mode))
           (is-vc-dir-mode (derived-mode-p 'vc-dir-mode))
           (ignore-param
-           (if (not (or is-dired-mode is-vc-dir-mode))
-               (list nil nil (vc-call-backend backend 'ign-find-ignore-file dir) nil)
-             (let* ((cur-file (or
-                               (and is-vc-dir-mode (vc-dir-current-file))
-                               (and is-dired-mode (car (dired-get-marked-files nil t)))))
-                    (ip (vc-call-backend backend 'ign-get-ignore-file-and-pattern cur-file dir t nil))
-                    (cur-file-rel (file-relative-name cur-file (file-name-directory (cadr ip)))))
-               (cons cur-file-rel ip))))
+           (nthcdr 4 (vc-call-backend
+                      backend 'ign-get-ignore-file-and-pattern
+                      (if (or is-dired-mode is-vc-dir-mode)
+                          (car (cadr (vc-ign-deduce-current-file t))) dir)
+                      dir t nil)))
           (default-pattern (cadr ignore-param))
           (ignore-file (nth 2 ignore-param))
           (ignore-dir (file-name-directory ignore-file))
           (ignore-completion-table
-           (delq nil (append  (list (and default-pattern "") (car ignore-param))
-                              (vc-call-backend backend 'ign-ignore-completion-table ignore-dir))))
+           (delq nil (append
+                      (list (and default-pattern
+                                 (not (string= default-pattern ""))
+                                 "")
+                            (car ignore-param))
+                      (vc-call-backend
+                       backend 'ign-ignore-completion-table ignore-dir))))
           (remove current-prefix-arg))
      (list
       (completing-read
@@ -304,6 +315,43 @@ patterns from the ignore file."
   (if backend
       (vc-call-backend backend 'ign-ignore pattern directory remove nil)
     (vc-ign-ignore pattern directory remove nil)))
+
+(defun vc-ign-file-root-relative-name
+    (files &optional directory backend to-kill-ring escape)
+  "Get file names for FILES relative to root of VC.
+
+DIRECTORY defaults to `default-directory' and is used to
+determine the responsible VC backend, unless BACKEND is not-nil.
+
+The files are concatenated with a newline.
+
+When called interactively, or if TO-KILL-RING is non-nil, the
+result is placed on the ‘kill-ring’.
+
+If ESCAPE is non-nil (prefix, if interactive), the filenames are
+escaped and anchored for BACKEND."
+  (interactive
+   (let* ((bf (vc-ign-vc-deduce-fileset))
+          (backend (or (car bf) 'RCS))
+          (files (cadr bf)))
+     (list files nil backend t current-prefix-arg)))
+  (let* ((directory (or directory default-directory))
+         (backend
+          (or backend
+              (let ((default-directory directory))
+                (vc-deduce-backend))
+              'RCS))
+         (indx (if escape 2 1))
+         (relative-names
+          (mapconcat
+           #'(lambda (file)
+               (nth indx
+                    (vc-call-backend
+                     backend 'ign-get-ignore-file-and-pattern
+                     file directory t nil)))
+           files "\n")))
+    (when to-kill-ring (kill-new relative-names))
+    relative-names))
 
 ;; .:lst:. end ui
 ;; .:lst:. start frontend
@@ -465,45 +513,16 @@ Ported from Python v3.7"
 ;; |||:sec:||| Tools
 ;; --------------------------------------------------
 
-(defun vc-ign-deduce-current-file ()
-  "Deduce a the current files and a backend to which to apply an operation."
+(defun vc-ign-deduce-current-file (&optional not-buffer)
+  "Deduce a the current files and a backend to which to apply an operation.
+If NOT-BUFFER is not nil, do not use buffer file name as candidate."
   (list (vc-deduce-backend)
         (cond
-         ((derived-mode-p 'vc-dir-mode)
-          (vc-dir-current-file))
-         ((derived-mode-p 'dired-mode)
-          (dired-get-filename))
-         (t (or (buffer-file-name) default-directory)))))
-
-(defun vc-ign-file-root-relative-name
-    (file &optional directory backend to-kill-ring)
-  "Get file name for FILE relative to root of VC.
-
-DIRECTORY defaults to `default-directory' and is used to
-determine the responsible VC backend, unless BACKEND is not-nil.
-
-When called interactively, or if TO-KILL-RING is non-nil, the
-result is placed on the ‘kill-ring’."
-
-  (interactive
-   (let* ((bf (vc-ign-deduce-current-file))
-          (backend (or (car bf) 'RCS))
-          (file (cadr bf)))
-     (list file nil backend t)))
-  (let* ((backend
-          (or backend
-              (let ((default-directory (or directory default-directory)))
-                (vc-deduce-backend))
-              'RCS))
-         (file (directory-file-name (expand-file-name file directory)))
-         (file-dir (file-name-directory file))
-         (root-dir (or (ignore-errors
-                         (vc-call-backend backend 'root file-dir))
-                       directory default-directory))
-         (relative-name (file-relative-name file root-dir))
-         (relative-name (if (string= relative-name ".") "" relative-name)))
-    (when to-kill-ring (kill-new relative-name))
-    relative-name))
+         ((derived-mode-p 'vc-dir-mode) (list (vc-dir-current-file)))
+         ((derived-mode-p 'dired-mode) (dired-get-marked-files nil t))
+         (t (or (and (not not-buffer) (buffer-file-name))
+                default-directory)))))
+;; (let ((d default-directory))  (equal (vc-default-ign-get-ignore-file-and-pattern 'Git nil d t) (vc-default-ign-get-ignore-file-and-pattern 'Git d d t))) => t
 
 (defun vc-ign-expand-file-name (file &optional directory)
   "Call ‘expand-file-name’ with normalized FILE and DIRECTORY.
@@ -573,6 +592,15 @@ Otherwise, if FILE is a directory, the final slash is removed."
   (let ((l (1- (length s))))
     (and (> l 0) (eq (aref s l) ?/) l)))
 
+(defun vc-ign-escape-pattern (pattern ignore-param is-dir)
+  "Escape and anchor PATTERN using IGNORE-PARAM.
+If IS-DIR is not nil, anchor the pattern as directory."
+  (concat
+   (plist-get ignore-param :anchor:)
+   (funcall (or (plist-get ignore-param :escape:) #'identity) pattern)
+   (or (and is-dir (plist-get ignore-param :dir-trailer:))
+       (plist-get ignore-param :trailer:))))
+
 ;; .:lst:. end tools
 
 ;; \|||:here:||||:todo:|
@@ -582,6 +610,19 @@ Otherwise, if FILE is a directory, the final slash is removed."
 ;; --------------------------------------------------
 ;; |||:sec:||| Integration
 ;; --------------------------------------------------
+
+(defgroup vc-ign nil
+  "Customization options for VC ignore feature."
+  :group 'vc
+  :version "24")
+
+(defcustom vc-ign-prefix
+  [?z]
+  "Key-sequence for binding shortcuts.
+The shortcuts are bund to this key sequence in variables
+‘vc-prefix-map’ and ‘vc-dir-mode-map’."
+  :type 'key-sequence
+  :group 'vc-ign)
 
 (defvar vc-ign-prefix-map
   (let ((map (make-sparse-keymap)))
@@ -602,11 +643,11 @@ Otherwise, if FILE is a directory, the final slash is removed."
                   :help "Ignore a file under current version control system"))
     map))
 
-(define-key vc-prefix-map "z" 'vc-ign-prefix-map)
+(define-key vc-prefix-map vc-ign-prefix 'vc-ign-prefix-map)
 (vc-ign-bindings--define-key vc-menu-map [vc-ign-ignore] (cons "VC Ignore" vc-ign-menu-map))
 
 (when (boundp 'vc-dir-mode-map)
-  (define-key vc-dir-mode-map  "z" 'vc-ign-prefix-map)
+  (define-key vc-dir-mode-map  vc-ign-prefix 'vc-ign-prefix-map)
   (vc-ign-bindings--define-key vc-dir-menu-map [vc-ign-ignore] (cons "VC Ignore" vc-ign-menu-map)))
 
 ;; .:lst:. end integration

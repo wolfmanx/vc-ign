@@ -32,8 +32,9 @@
 
 ;;; Code:
 
-(provide 'vc-default-ign)
-(require 'vc-ign)
+(eval-and-compile
+  (provide 'vc-default-ign)
+  (require 'vc-ign))
 
 ;; .:lst:. start backport
 ;; --------------------------------------------------
@@ -62,64 +63,84 @@
 BACKEND is the current backend.  Parameters PATTERN-OR-FILE,
 DIRECTORY, REMOVE, IS-FILE are passed on from ‘vc-ign-ignore’."
   (apply #'vc-call-backend backend 'ign-modify-ignore-specs
-         (vc-call-backend backend 'ign-get-ignore-file-and-pattern
-                          pattern-or-file directory is-file remove)))
+         (nthcdr 5 (vc-call-backend
+                    backend 'ign-get-ignore-file-and-pattern
+                    pattern-or-file directory is-file remove))))
 
 (defun vc-default-ign-get-ignore-file-and-pattern (backend pattern-or-file &optional directory is-file remove)
   "Determine ignore file and pattern for BACKEND from PATTERN-OR-FILE.
 Implements API of ‘vc-ign-ignore’ for PATTERN-OR-FILE, DIRECTORY and IS-FILE.
 REMOVE is passed through without evaluation.
-Returns (pattern ignore-file remove) suitable for calling
-‘vc-default-ign-modify-ignore-specs’."
+Returns a list
+    \(ignore-param
+      root-rel-path     root-rel-pattern     root-dir
+      ign-file-rel-path ign-file-rel-pattern ignore-file
+      remove)
+suitable for calling ‘vc-default-ign-modify-ignore-specs’
+with (nthcdr 5 result)."
+  (let* ((directory (or directory default-directory))
+         root-dir
+         root-rel-path)
+    (if (null pattern-or-file) (setq pattern-or-file ""))
+    (when is-file
+      (setq pattern-or-file
+            (vc-ign-expand-file-name pattern-or-file directory))
+      ;; apply directory-as-file-name, otherwise, if pattern-or-file was
+      ;; a sub-repository, ign-find-ignore-file would return the wrong
+      ;; ignore file:
+      ;; (vc-cvs-ign-find-ignore-file "/re/po/dir/") => /re/po/dir/.cvsignore
+      ;; (vc-cvs-ign-find-ignore-file "/re/po/dir") => /re/po/.cvsignore
+      (setq root-dir (or (ignore-errors
+                           (vc-call-backend backend 'root directory))
+                         directory))
+      (setq root-rel-path (directory-file-name
+                           (file-relative-name pattern-or-file root-dir)))
+      (if (not (string= pattern-or-file directory))
+          (setq directory (file-name-directory
+                           (directory-file-name pattern-or-file)))))
 
-  (if (null pattern-or-file) (setq pattern-or-file ""))
-  (setq directory (or directory default-directory))
-  (when is-file
-    (setq pattern-or-file (vc-ign-expand-file-name pattern-or-file directory))
-    ;; apply directory-as-file-name, otherwise, if pattern-or-file was
-    ;; a sub-repository, ign-find-ignore-file would return the wrong
-    ;; ignore file:
-    ;; (vc-cvs-ign-find-ignore-file "/re/po/dir/") => /re/po/dir/.cvsignore
-    ;; (vc-cvs-ign-find-ignore-file "/re/po/dir") => /re/po/.cvsignore
-    (if (not (string= pattern-or-file directory))
-        (setq directory (file-name-directory (directory-file-name pattern-or-file)))))
+    (let* ((ignore-file
+            (vc-call-backend backend 'ign-find-ignore-file directory))
+           (ignore-dir (file-name-directory ignore-file))
+           is-dir ignore-param)
+      (if (not is-file)
+          (setq ignore-param vc-ign-ignore-param-none)
 
-  (let* ((ignore-file (vc-call-backend backend 'ign-find-ignore-file directory))
-         (ignore-dir (file-name-directory ignore-file))
-         is-dir ignore-param pattern)
-    (if (not is-file)
-        (setq ignore-param vc-ign-ignore-param-none)
+        ;; prepare file pattern
+        (let* ((ignore-dir-len (length ignore-dir))
+               (file-len (length pattern-or-file)))
+          (unless (cond
+                   ((>= file-len ignore-dir-len)
+                    (string= (substring pattern-or-file 0 ignore-dir-len)
+                             ignore-dir))
+                   ((= (1- ignore-dir-len) file-len)
+                    (string= pattern-or-file
+                             (substring ignore-dir 0 file-len))))
+            (error "Ignore spec %s is not below project root %s"
+                   pattern-or-file ignore-dir))
+          ;; directory may not yet exist
+          (setq is-dir (or (vc-ign-has-final-slash pattern-or-file)
+                           (file-directory-p pattern-or-file)))
+          (setq pattern-or-file
+                (directory-file-name
+                 (substring (if is-dir
+                                (file-name-as-directory pattern-or-file)
+                              pattern-or-file)
+                            ignore-dir-len)))
 
-      ;; prepare file pattern
-      (let* ((ignore-dir-len (length ignore-dir))
-             (file-len (length pattern-or-file)))
-        (unless (cond
-                 ((>= file-len ignore-dir-len)
-                  (string= (substring pattern-or-file 0 ignore-dir-len) ignore-dir))
-                 ((= (1- ignore-dir-len) file-len)
-                  (string= pattern-or-file (substring ignore-dir 0 file-len))))
-          (error "Ignore spec %s is not below project root %s"
-                 pattern-or-file ignore-dir))
-        ;; directory may not yet exist
-        (setq is-dir (or (vc-ign-has-final-slash pattern-or-file)
-                         (file-directory-p pattern-or-file)))
-        (setq pattern-or-file
-              (directory-file-name
-               (substring (if is-dir
-                              (file-name-as-directory pattern-or-file)
-                            pattern-or-file)
-                          ignore-dir-len)))
-        ;; (setq debug-on-next-call t) ;; |||:here:|||
-        (if (string= pattern-or-file "") (setq is-dir nil))
-        (setq ignore-param (vc-call-backend backend 'ign-ignore-param ignore-file))))
-    (setq pattern
-          (concat
-           (plist-get ignore-param :anchor:)
-           (funcall (or (plist-get ignore-param :escape:) #'identity)
-                    pattern-or-file)
-           (or (and is-dir (plist-get ignore-param :dir-trailer:))
-               (plist-get ignore-param :trailer:))))
-    (list pattern ignore-file remove)))
+          ;; (setq debug-on-next-call t) ;; |||:here:|||
+          (if (string= pattern-or-file "") (setq is-dir nil))
+          (setq ignore-param
+                (vc-call-backend backend 'ign-ignore-param ignore-file))))
+
+      (list ignore-param root-rel-path
+            (and root-rel-path
+                 (vc-ign-escape-pattern root-rel-path ignore-param is-dir))
+            root-dir pattern-or-file
+            ;; (nthcdr 5 ...) can be used as args for calling
+            ;; ‘vc-default-ign-modify-ignore-specs’
+            (vc-ign-escape-pattern pattern-or-file ignore-param is-dir)
+            ignore-file remove))))
 
 (defun vc-default-ign-modify-ignore-specs (_backend pattern ignore-file remove)
   "Add PATTERN to IGNORE-FILE, if REMOVE is nil..
