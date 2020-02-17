@@ -43,11 +43,11 @@
 (put 'Git 'vc-functions nil)
 (put 'GIT 'vc-functions nil)
 
+(defun vc-git-ign-find-ignore-file (file)
+  "Return the git ignore file that controls FILE."
+  (expand-file-name ".gitignore" (vc-git-root file)))
 (if (fboundp 'vc-git-find-ignore-file)
-    (defalias 'vc-git-ign-find-ignore-file 'vc-git-find-ignore-file)
-  (defun vc-git-ign-find-ignore-file (file)
-    "Return the git ignore file that controls FILE."
-    (expand-file-name ".gitignore" (vc-git-root file))))
+    (defalias 'vc-git-ign-find-ignore-file 'vc-git-find-ignore-file))
 
 (defun vc-git-ign-ignore-param (&optional _ignore-file)
   "Appropriate Git ignore parameters for IGNORE-FILE."

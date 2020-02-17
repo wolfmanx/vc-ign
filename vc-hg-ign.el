@@ -43,12 +43,13 @@
 (put 'Hg 'vc-functions nil)
 (put 'HG 'vc-functions nil)
 
+(defun vc-hg-ign-find-ignore-file (file)
+  "Return the root directory of the repository of FILE."
+  (expand-file-name ".hgignore"
+		    (vc-hg-root file)))
 (if (fboundp 'vc-hg-find-ignore-file)
-    (defalias 'vc-hg-ign-find-ignore-file 'vc-hg-find-ignore-file)
-  (defun vc-hg-ign-find-ignore-file (file)
-    "Return the root directory of the repository of FILE."
-    (expand-file-name ".hgignore"
-                      (vc-hg-root file))))
+    (defalias 'vc-hg-ign-find-ignore-file 'vc-hg-find-ignore-file))
+
 
 (defvar vc-hg-ign-ignore-param-regexp
   '(:escape: vc-ign-py-regexp-quote :anchor: "^" :trailer: "$" :dir-trailer: "/")

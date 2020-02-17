@@ -43,11 +43,11 @@
 (put 'Mtn 'vc-functions nil)
 (put 'MTN 'vc-functions nil)
 
+(defun vc-mtn-ign-find-ignore-file (file)
+  "Return the mtn ignore file that controls FILE."
+  (expand-file-name ".mtn-ignore" (vc-mtn-root file)))
 (if (fboundp 'vc-mtn-find-ignore-file)
-    (defalias 'vc-mtn-ign-find-ignore-file 'vc-mtn-find-ignore-file)
-  (defun vc-mtn-ign-find-ignore-file (file)
-    "Return the mtn ignore file that controls FILE."
-    (expand-file-name ".mtn-ignore" (vc-mtn-root file))))
+    (defalias 'vc-mtn-ign-find-ignore-file 'vc-mtn-find-ignore-file))
 
 (defvar vc-mtn-ign-ignore-param-regexp
   '(:escape: vc-ign-py-regexp-quote :anchor: "^" :trailer: "$" :dir-trailer: "/")

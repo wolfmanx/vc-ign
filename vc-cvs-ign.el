@@ -42,11 +42,11 @@
 
 (put 'CVS 'vc-functions nil)
 
-(if (fboundp 'vc-cvs-find-ignore-file)
-    (defalias 'vc-cvs-ign-find-ignore-file 'vc-cvs-find-ignore-file)
-  (defun vc-cvs-ign-find-ignore-file (file)
+(defun vc-cvs-ign-find-ignore-file (file)
     "Return the ignore file for FILE."
-    (expand-file-name ".cvsignore" (if file (file-name-directory file)))))
+    (expand-file-name ".cvsignore" (if file (file-name-directory file))))
+(if (fboundp 'vc-cvs-find-ignore-file)
+    (defalias 'vc-cvs-ign-find-ignore-file 'vc-cvs-find-ignore-file))
 
 (defvar vc-cvs-ign-ignore-param-glob
   '(:escape: vc-cvs-ign-glob-escape :anchor: "" :trailer: "" :dir-trailer: "/")

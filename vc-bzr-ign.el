@@ -45,12 +45,11 @@
 
 (declare-function 'vc-bzr-root "vc-bzr" (file) t)
 
+(defun vc-bzr-ign-find-ignore-file (file)
+  "Return the root directory of the repository of FILE."
+  (expand-file-name ".bzrignore" (vc-bzr-root file)))
 (if (fboundp 'vc-bzr-find-ignore-file)
-    (defalias 'vc-bzr-ign-find-ignore-file 'vc-bzr-find-ignore-file)
-  (defun vc-bzr-ign-find-ignore-file (file)
-    "Return the root directory of the repository of FILE."
-    (expand-file-name ".bzrignore"
-                      (vc-bzr-root file))))
+    (defalias 'vc-bzr-ign-find-ignore-file 'vc-bzr-find-ignore-file))
 
 (defvar vc-bzr-ign-ignore-param-regexp
   '(:escape: vc-ign-py-regexp-quote :anchor: "RE:^" :trailer: "$" :dir-trailer: "/.*")

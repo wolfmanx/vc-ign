@@ -42,11 +42,11 @@
 
 (put 'SRC 'vc-functions nil)
 
+(defun vc-src-ign-find-ignore-file (file)
+  "Return the ignore file for FILE."
+  (expand-file-name ".srcignore" (if file (file-name-directory file))))
 (if (fboundp 'vc-src-find-ignore-file)
-    (defalias 'vc-src-ign-find-ignore-file 'vc-src-find-ignore-file)
-  (defun vc-src-ign-find-ignore-file (file)
-    "Return the ignore file for FILE."
-    (expand-file-name ".srcignore" (if file (file-name-directory file)))))
+    (defalias 'vc-src-ign-find-ignore-file 'vc-src-find-ignore-file))
 
 (defun vc-src-ign-glob-escape (string)
   "Escape special glob characters in STRING."

@@ -55,11 +55,11 @@
 
 (put 'SVN 'vc-functions nil)
 
+(defun vc-svn-ign-find-ignore-file (file)
+  "Return the virtual ignore file for FILE."
+  (expand-file-name ".svnignore" (if file (file-name-directory file))))
 (if (fboundp 'vc-svn-find-ignore-file)
-    (defalias 'vc-svn-ign-find-ignore-file 'vc-svn-find-ignore-file)
-  (defun vc-svn-ign-find-ignore-file (file)
-    "Return the virtual ignore file for FILE."
-    (expand-file-name ".svnignore" (if file (file-name-directory file)))))
+    (defalias 'vc-svn-ign-find-ignore-file 'vc-svn-find-ignore-file))
 
 (defvar vc-svn-ign-ignore-param-glob
   '(:escape: vc-ign-glob-escape :anchor: "" :trailer: "" :dir-trailer: "")
